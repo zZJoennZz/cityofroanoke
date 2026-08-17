@@ -1,0 +1,1419 @@
+<?php
+/**
+ * Template Name: Event Page
+ * Description: Reusable event template with customizable color scheme.
+ *              Uses native WordPress post meta — NO PLUGIN REQUIRED.
+ * 
+ * INSTALLATION:
+ * 1. Copy this file to: /wp-content/themes/cityofroanoke/template-event.php
+ * 2. Copy functions-event-meta.php contents into your theme's functions.php
+ * 3. Create a Page, set Template to "Event Page", fill in the "Event Page Details" meta box
+ */
+
+get_header();
+
+$post_id = get_the_ID();
+$prefix = '_roanoke_event_';
+
+// ─── HELPER: Get meta value ───
+function roanoke_event_meta($key, $default = '') {
+    global $post_id, $prefix;
+    $val = get_post_meta($post_id, $prefix . $key, true);
+    return $val !== '' ? $val : $default;
+}
+
+function roanoke_event_meta_array($key) {
+    global $post_id, $prefix;
+    $val = get_post_meta($post_id, $prefix . $key, true);
+    return is_array($val) ? $val : [];
+}
+
+// ─── COLOR SCHEMES ───
+$scheme = roanoke_event_meta('color_scheme', 'custom');
+$presets = [
+    'fireworks' => ['primary' => '#B91C1C', 'secondary' => '#1E3A5F', 'accent' => '#F59E0B', 'dark' => '#0F172A', 'light' => '#FEF2F2'],
+    'celebrate' => ['primary' => '#D97706', 'secondary' => '#7C2D12', 'accent' => '#FCD34D', 'dark' => '#431407', 'light' => '#FEF3C7'],
+    'taste'     => ['primary' => '#65A30D', 'secondary' => '#3F2E18', 'accent' => '#F97316', 'dark' => '#1C1917', 'light' => '#ECFCCB'],
+    'holiday'   => ['primary' => '#166534', 'secondary' => '#991B1B', 'accent' => '#EAB308', 'dark' => '#0F172A', 'light' => '#FEF9C3'],
+    'hometown'  => ['primary' => '#1E40AF', 'secondary' => '#0F172A', 'accent' => '#94A3B8', 'dark' => '#020617', 'light' => '#E0F2FE'],
+];
+
+if ($scheme !== 'custom' && isset($presets[$scheme])) {
+    $p = $presets[$scheme];
+    $color_primary   = $p['primary'];
+    $color_secondary = $p['secondary'];
+    $color_accent    = $p['accent'];
+    $color_dark      = $p['dark'];
+    $color_light     = $p['light'];
+} else {
+    $color_primary   = roanoke_event_meta('color_primary', '#D97706');
+    $color_secondary = roanoke_event_meta('color_secondary', '#7C2D12');
+    $color_accent    = roanoke_event_meta('color_accent', '#FCD34D');
+    $color_dark      = roanoke_event_meta('color_dark', '#1F2937');
+    $color_light     = roanoke_event_meta('color_light', '#FEF3C7');
+}
+
+// ─── FIELD FETCH ───
+$event_logo_id     = roanoke_event_meta('logo_id');
+$tagline           = roanoke_event_meta('tagline', 'Mark Your Calendar!');
+$hero_image_id     = roanoke_event_meta('hero_image_id');
+$hero_video        = roanoke_event_meta('hero_video');
+$short_desc        = roanoke_event_meta('short_desc');
+$event_date_raw    = roanoke_event_meta('date');
+$event_time        = roanoke_event_meta('time', '5:00 PM');
+$event_end_time    = roanoke_event_meta('end_time');
+$event_location    = roanoke_event_meta('location', 'Downtown Roanoke');
+$event_address     = roanoke_event_meta('address');
+$event_cost        = roanoke_event_meta('cost', 'FREE');
+$countdown_target  = roanoke_event_meta('countdown');
+$long_desc         = roanoke_event_meta('long_desc');
+$schedule          = roanoke_event_meta_array('schedule');
+$bring_items       = roanoke_event_meta_array('bring');
+$leave_items       = roanoke_event_meta_array('leave');
+$parking_info      = roanoke_event_meta('parking');
+$map_embed         = roanoke_event_meta('map_embed');
+$map_image_id      = roanoke_event_meta('map_image_id');
+$vendors_text      = roanoke_event_meta('vendors_text');
+$vendor_link       = roanoke_event_meta('vendor_link');
+$sponsors          = roanoke_event_meta_array('sponsors');
+$volunteer_link    = roanoke_event_meta('volunteer_link');
+$gallery_ids       = roanoke_event_meta('gallery_ids');
+$faq_items         = roanoke_event_meta_array('faq');
+$awards_text       = roanoke_event_meta('awards');
+$merch_text        = roanoke_event_meta('merch_text');
+$merch_link        = roanoke_event_meta('merch_link');
+$cta_text          = roanoke_event_meta('cta_text', 'Get Tickets');
+$cta_link          = roanoke_event_meta('cta_link');
+$cta_secondary_text= roanoke_event_meta('cta_secondary_text', 'Learn More');
+$cta_secondary_link= roanoke_event_meta('cta_secondary_link');
+
+// Format date
+$event_date_obj = $event_date_raw ? DateTime::createFromFormat('Y-m-d', $event_date_raw) : null;
+$event_date_display = $event_date_obj ? $event_date_obj->format('F j, Y') : '';
+$event_day   = $event_date_obj ? $event_date_obj->format('j') : '';
+$event_month = $event_date_obj ? $event_date_obj->format('M') : '';
+
+// Gallery images
+$gallery_images = [];
+if ($gallery_ids) {
+    foreach (explode(',', $gallery_ids) as $gid) {
+        $gid = intval(trim($gid));
+        if ($gid) {
+            $img = wp_get_attachment_image_src($gid, 'medium_large');
+            if ($img) {
+                $gallery_images[] = [
+                    'url' => $img[0],
+                    'alt' => get_post_meta($gid, '_wp_attachment_image_alt', true),
+                    'caption' => get_post($gid)->post_excerpt,
+                ];
+            }
+        }
+    }
+}
+
+// Awards
+$awards = [];
+if ($awards_text) {
+    foreach (preg_split('/
+|
+|
+/', $awards_text) as $line) {
+        $line = trim($line);
+        if ($line) $awards[] = $line;
+    }
+}
+?>
+
+<style>
+:root {
+    --event-primary:   <?php echo esc_attr($color_primary); ?>;
+    --event-secondary: <?php echo esc_attr($color_secondary); ?>;
+    --event-accent:    <?php echo esc_attr($color_accent); ?>;
+    --event-dark:      <?php echo esc_attr($color_dark); ?>;
+    --event-light:     <?php echo esc_attr($color_light); ?>;
+    --event-white:     #FFFFFF;
+}
+
+/* ════════════════════════════════════════
+   EVENT PAGE BASE
+   ════════════════════════════════════════ */
+.event-page {
+    font-family: inherit;
+    color: var(--event-dark);
+    overflow-x: hidden;
+}
+.event-page section { position: relative; }
+
+.event-headline {
+    font-family: var(--font-headline, 'futura-pt', 'Futura', sans-serif);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.05;
+}
+.event-body {
+    font-family: var(--font-body, 'source-sans-pro', 'Source Sans Pro', sans-serif);
+    line-height: 1.7;
+}
+
+/* ─── Buttons ─── */
+.event-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 2.5rem;
+    font-family: var(--font-headline);
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border: 3px solid var(--event-primary);
+    background: var(--event-primary);
+    color: var(--event-white);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-decoration: none;
+}
+.event-btn:hover {
+    background: transparent;
+    color: var(--event-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+.event-btn-outline {
+    background: transparent;
+    color: var(--event-white);
+    border-color: var(--event-white);
+}
+.event-btn-outline:hover {
+    background: var(--event-white);
+    color: var(--event-primary);
+}
+.event-btn-secondary {
+    border-color: var(--event-secondary);
+    background: var(--event-secondary);
+}
+.event-btn-secondary:hover { color: var(--event-secondary); }
+
+/* ─── Section Headers ─── */
+.event-section-label {
+    display: inline-block;
+    font-family: var(--font-headline);
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--event-accent);
+    margin-bottom: 0.75rem;
+    padding: 0.35rem 1rem;
+    background: var(--event-dark);
+}
+.event-section-title {
+    font-family: var(--font-headline);
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 800;
+    text-transform: uppercase;
+    line-height: 1.05;
+    margin-bottom: 1rem;
+}
+
+/* ════════════════════════════════════════
+   HERO
+   ════════════════════════════════════════ */
+.event-hero {
+    position: relative;
+    min-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: var(--event-dark);
+}
+.event-hero__media {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+.event-hero__media img,
+.event-hero__media video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.55;
+}
+.event-hero__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--event-primary) 0%, transparent 60%, var(--event-secondary) 100%);
+    opacity: 0.75;
+    z-index: 2;
+    mix-blend-mode: multiply;
+}
+.event-hero__pattern {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    opacity: 0.08;
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,0.1) 35px, rgba(255,255,255,0.1) 70px);
+}
+.event-hero__content {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 2rem;
+    max-width: 900px;
+}
+.event-hero__logo {
+    max-width: 280px;
+    margin: 0 auto 1.5rem;
+    filter: drop-shadow(0 4px 20px rgba(0,0,0,0.3));
+}
+.event-hero__logo img { width: 100%; height: auto; }
+.event-hero__badge {
+    display: inline-block;
+    font-family: var(--font-headline);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--event-accent);
+    background: rgba(0,0,0,0.4);
+    padding: 0.5rem 1.5rem;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid var(--event-accent);
+}
+.event-hero__title {
+    font-family: var(--font-headline);
+    font-size: clamp(3rem, 7vw, 6rem);
+    font-weight: 900;
+    text-transform: uppercase;
+    color: var(--event-white);
+    line-height: 0.95;
+    margin-bottom: 1rem;
+    text-shadow: 0 4px 30px rgba(0,0,0,0.4);
+}
+.event-hero__subtitle {
+    font-family: var(--font-body);
+    font-size: clamp(1.1rem, 2vw, 1.5rem);
+    color: rgba(255,255,255,0.9);
+    max-width: 600px;
+    margin: 0 auto 2rem;
+    line-height: 1.5;
+}
+.event-hero__dateblock {
+    display: inline-flex;
+    align-items: center;
+    gap: 1.5rem;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+    padding: 1rem 2.5rem;
+    margin-bottom: 2rem;
+    border: 2px solid var(--event-accent);
+}
+.event-hero__datebox { text-align: center; line-height: 1; }
+.event-hero__datebox .day {
+    font-family: var(--font-headline);
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--event-accent);
+    display: block;
+}
+.event-hero__datebox .month {
+    font-family: var(--font-headline);
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--event-white);
+}
+.event-hero__dateinfo {
+    text-align: left;
+    border-left: 2px solid rgba(255,255,255,0.3);
+    padding-left: 1.5rem;
+}
+.event-hero__dateinfo .time {
+    font-family: var(--font-headline);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--event-white);
+    display: block;
+    margin-bottom: 0.25rem;
+}
+.event-hero__dateinfo .location {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.8);
+}
+.event-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1rem;
+}
+.event-hero__scroll {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    animation: eventBounce 2s infinite;
+}
+.event-hero__scroll span {
+    display: block;
+    width: 24px;
+    height: 40px;
+    border: 2px solid rgba(255,255,255,0.6);
+    border-radius: 12px;
+    position: relative;
+}
+.event-hero__scroll span::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 8px;
+    background: var(--event-accent);
+    border-radius: 2px;
+    animation: eventScrollDot 2s infinite;
+}
+@keyframes eventBounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+    40% { transform: translateX(-50%) translateY(-10px); }
+    60% { transform: translateX(-50%) translateY(-5px); }
+}
+@keyframes eventScrollDot {
+    0% { opacity: 1; top: 6px; }
+    100% { opacity: 0; top: 20px; }
+}
+
+/* ════════════════════════════════════════
+   QUICK INFO BAR
+   ════════════════════════════════════════ */
+.event-infobar {
+    background: var(--event-primary);
+    padding: 0;
+    position: relative;
+    z-index: 20;
+}
+.event-infobar__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+@media (min-width: 768px) {
+    .event-infobar__grid { grid-template-columns: repeat(4, 1fr); }
+}
+.event-infobar__item {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    border-right: 1px solid rgba(255,255,255,0.2);
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+@media (min-width: 768px) {
+    .event-infobar__item { border-bottom: none; }
+}
+.event-infobar__item:last-child { border-right: none; }
+.event-infobar__icon {
+    width: 32px;
+    height: 32px;
+    margin: 0 auto 0.5rem;
+    color: var(--event-accent);
+}
+.event-infobar__label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 0.15rem;
+}
+.event-infobar__value {
+    font-family: var(--font-headline);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--event-white);
+}
+
+/* ════════════════════════════════════════
+   COLOR-BLOCKED SECTIONS
+   ════════════════════════════════════════ */
+.event-section { padding: 5rem 1.5rem; }
+@media (min-width: 768px) { .event-section { padding: 6rem 2rem; } }
+
+.event-section--primary   { background: var(--event-primary); color: var(--event-white); }
+.event-section--primary .event-section-title { color: var(--event-white); }
+.event-section--secondary { background: var(--event-secondary); color: var(--event-white); }
+.event-section--secondary .event-section-title { color: var(--event-white); }
+.event-section--light     { background: var(--event-light); color: var(--event-dark); }
+.event-section--light .event-section-title { color: var(--event-dark); }
+.event-section--dark      { background: var(--event-dark); color: var(--event-white); }
+.event-section--dark .event-section-title { color: var(--event-white); }
+.event-section--white     { background: var(--event-white); color: var(--event-dark); }
+.event-section--accent    { background: var(--event-accent); color: var(--event-dark); }
+.event-section--accent .event-section-title { color: var(--event-dark); }
+
+/* ════════════════════════════════════════
+   ABOUT
+   ════════════════════════════════════════ */
+.event-about__grid {
+    display: grid;
+    gap: 3rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    align-items: center;
+}
+@media (min-width: 768px) {
+    .event-about__grid { grid-template-columns: 1fr 1fr; gap: 4rem; }
+}
+.event-about__image { position: relative; }
+.event-about__image img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+.event-about__image::before {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: -15px;
+    right: 15px;
+    bottom: 15px;
+    border: 4px solid var(--event-accent);
+    z-index: -1;
+}
+.event-about__image::after {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    right: -15px;
+    bottom: -15px;
+    background: var(--event-primary);
+    opacity: 0.2;
+    z-index: -1;
+}
+.event-about__text { font-size: 1.1rem; line-height: 1.8; }
+.event-about__text p + p { margin-top: 1.25rem; }
+
+/* ════════════════════════════════════════
+   SCHEDULE
+   ════════════════════════════════════════ */
+.event-schedule__wrap { max-width: 900px; margin: 0 auto; }
+.event-schedule__item {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    border-left: 4px solid var(--event-accent);
+    background: rgba(255,255,255,0.05);
+    margin-bottom: 1rem;
+    transition: all 0.2s ease;
+}
+.event-schedule__item:hover {
+    background: rgba(255,255,255,0.1);
+    transform: translateX(8px);
+}
+.event-schedule__time {
+    font-family: var(--font-headline);
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--event-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.event-schedule__details h4 {
+    font-family: var(--font-headline);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+    color: inherit;
+}
+.event-schedule__details p {
+    font-size: 0.95rem;
+    opacity: 0.85;
+    margin: 0;
+}
+
+/* ════════════════════════════════════════
+   BRING / LEAVE
+   ════════════════════════════════════════ */
+.event-rules__grid {
+    display: grid;
+    gap: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+@media (min-width: 768px) {
+    .event-rules__grid { grid-template-columns: 1fr 1fr; gap: 3rem; }
+}
+.event-rules__box { padding: 2.5rem; position: relative; }
+.event-rules__box--bring { background: var(--event-primary); color: var(--event-white); }
+.event-rules__box--leave {
+    background: var(--event-dark);
+    color: var(--event-white);
+    border: 3px solid var(--event-accent);
+}
+.event-rules__box h3 {
+    font-family: var(--font-headline);
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.event-rules__box h3 .icon { width: 36px; height: 36px; flex-shrink: 0; }
+.event-rules__box ul { list-style: none; padding: 0; margin: 0; }
+.event-rules__box li {
+    padding: 0.6rem 0;
+    padding-left: 1.75rem;
+    position: relative;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    font-size: 1rem;
+}
+.event-rules__box li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: var(--event-accent);
+}
+.event-rules__box--bring li::before { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+.event-rules__box--leave li::before { clip-path: polygon(20% 0%, 0% 20%, 30% 50%, 0% 80%, 20% 100%, 50% 70%, 80% 100%, 100% 80%, 70% 50%, 100% 20%, 80% 0%, 50% 30%); }
+
+/* ════════════════════════════════════════
+   COUNTDOWN
+   ════════════════════════════════════════ */
+.event-countdown {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+}
+.event-countdown__box {
+    background: rgba(0,0,0,0.4);
+    border: 2px solid var(--event-accent);
+    padding: 1.25rem 1.5rem;
+    text-align: center;
+    min-width: 90px;
+}
+.event-countdown__number {
+    font-family: var(--font-headline);
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--event-accent);
+    line-height: 1;
+    display: block;
+}
+.event-countdown__label {
+    font-family: var(--font-headline);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.8);
+    margin-top: 0.5rem;
+    display: block;
+}
+
+/* ════════════════════════════════════════
+   MAP
+   ════════════════════════════════════════ */
+.event-map__wrap {
+    position: relative;
+    background: var(--event-secondary);
+    padding: 2rem;
+}
+@media (min-width: 768px) { .event-map__wrap { padding: 3rem; } }
+.event-map__wrap::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: -20px;
+    right: 20px;
+    bottom: 20px;
+    border: 4px solid var(--event-accent);
+    z-index: 0;
+    pointer-events: none;
+}
+.event-map__frame {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 400px;
+    border: none;
+    filter: grayscale(30%) contrast(1.1);
+}
+.event-map__frame:hover { filter: none; }
+
+/* ════════════════════════════════════════
+   PARTICIPATE CARDS
+   ════════════════════════════════════════ */
+.event-cta-grid {
+    display: grid;
+    gap: 1.5rem;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+@media (min-width: 768px) { .event-cta-grid { grid-template-columns: repeat(2, 1fr); } }
+.event-cta-card {
+    padding: 2.5rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+.event-cta-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: var(--event-accent);
+}
+.event-cta-card--primary { background: var(--event-primary); color: var(--event-white); }
+.event-cta-card--secondary { background: var(--event-secondary); color: var(--event-white); }
+.event-cta-card--accent { background: var(--event-accent); color: var(--event-dark); }
+.event-cta-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+.event-cta-card h3 {
+    font-family: var(--font-headline);
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+}
+.event-cta-card p {
+    font-size: 0.95rem;
+    opacity: 0.9;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+/* ════════════════════════════════════════
+   GALLERY
+   ════════════════════════════════════════ */
+.event-gallery__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+@media (min-width: 768px) {
+    .event-gallery__grid { grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+}
+.event-gallery__item {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1;
+    cursor: pointer;
+}
+.event-gallery__item:nth-child(3n+1) {
+    grid-row: span 2;
+    grid-column: span 2;
+}
+.event-gallery__item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+.event-gallery__item:hover img { transform: scale(1.08); }
+.event-gallery__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, var(--event-primary), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    display: flex;
+    align-items: flex-end;
+    padding: 1.5rem;
+}
+.event-gallery__item:hover .event-gallery__overlay { opacity: 0.85; }
+.event-gallery__caption {
+    font-family: var(--font-headline);
+    font-weight: 700;
+    color: var(--event-white);
+    font-size: 1.1rem;
+    text-transform: uppercase;
+}
+
+/* ════════════════════════════════════════
+   FAQ
+   ════════════════════════════════════════ */
+.event-faq__item { border-bottom: 2px solid rgba(255,255,255,0.1); padding: 1.5rem 0; }
+.event-faq__question {
+    font-family: var(--font-headline);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+.event-faq__question::after {
+    content: '+';
+    font-size: 1.5rem;
+    font-weight: 300;
+    color: var(--event-accent);
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+}
+.event-faq__item[open] .event-faq__question::after { transform: rotate(45deg); }
+.event-faq__answer {
+    padding-top: 1rem;
+    font-size: 1rem;
+    line-height: 1.7;
+    opacity: 0.9;
+}
+
+/* ════════════════════════════════════════
+   AWARDS
+   ════════════════════════════════════════ */
+.event-awards__list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+.event-awards__badge {
+    background: rgba(0,0,0,0.3);
+    border: 2px solid var(--event-accent);
+    padding: 0.75rem 1.5rem;
+    font-family: var(--font-headline);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--event-white);
+}
+
+/* ════════════════════════════════════════
+   FOOTER CTA
+   ════════════════════════════════════════ */
+.event-footercta {
+    text-align: center;
+    padding: 5rem 2rem;
+    background: linear-gradient(135deg, var(--event-primary), var(--event-secondary));
+    position: relative;
+    overflow: hidden;
+}
+.event-footercta::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(255,255,255,0.03) 20px, rgba(255,255,255,0.03) 40px);
+}
+.event-footercta__title {
+    font-family: var(--font-headline);
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    text-transform: uppercase;
+    color: var(--event-white);
+    margin-bottom: 1rem;
+    position: relative;
+}
+.event-footercta__text {
+    font-size: 1.15rem;
+    color: rgba(255,255,255,0.85);
+    max-width: 600px;
+    margin: 0 auto 2rem;
+    position: relative;
+}
+
+/* ─── SPONSORS MARQUEE ─── */
+.event-sponsors-marquee {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+.event-sponsors-track {
+    display: inline-flex;
+    align-items: center;
+    gap: 5rem;
+    width: max-content;
+    will-change: transform;
+}
+.event-sponsors-marquee:hover .event-sponsors-track {
+    animation-play-state: paused !important;
+}
+.event-sponsor-item {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 2rem;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    min-width: 160px;
+    height: 100px;
+    transition: transform 0.3s ease, background 0.3s ease;
+}
+.event-sponsor-item:hover {
+    background: rgba(255,255,255,0.25);
+    transform: scale(1.08);
+}
+.event-sponsor-item img {
+    max-height: 60px;
+    width: auto;
+    max-width: 160px;
+    object-fit: contain;
+    /* filter: brightness(0) invert(1); */
+    opacity: 0.95;
+    pointer-events: none;
+}
+.event-sponsor-name {
+    font-family: var(--font-headline);
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--event-white);
+    white-space: nowrap;
+}
+@keyframes eventSponsorScroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+/* ════════════════════════════════════════
+   ANIMATIONS & RESPONSIVE
+   ════════════════════════════════════════ */
+.event-reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.event-reveal.visible { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 640px) {
+    .event-hero__dateblock { flex-direction: column; gap: 0.75rem; padding: 1rem 1.5rem; }
+    .event-hero__dateinfo { border-left: none; border-top: 2px solid rgba(255,255,255,0.3); padding-left: 0; padding-top: 0.75rem; text-align: center; }
+    .event-schedule__item { grid-template-columns: 1fr; gap: 0.5rem; }
+    .event-countdown__box { min-width: 70px; padding: 1rem; }
+    .event-countdown__number { font-size: 1.75rem; }
+    .event-infobar__grid { grid-template-columns: repeat(2, 1fr); }
+    .event-infobar__item:nth-child(2) { border-right: none; }
+    .event-infobar__item:nth-child(1), .event-infobar__item:nth-child(2) { border-bottom: 1px solid rgba(255,255,255,0.15); }
+    .event-rules__grid { grid-template-columns: 1fr; }
+    .event-cta-grid { grid-template-columns: 1fr; }
+    .event-gallery__grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+
+<main class="event-page">
+
+<!-- ════════════════════════════════════════
+     HERO
+     ════════════════════════════════════════ -->
+<section class="event-hero">
+    <div class="event-hero__media">
+        <?php if ($hero_video): ?>
+            <video autoplay muted loop playsinline poster="<?php echo $hero_image_id ? esc_url(wp_get_attachment_image_url($hero_image_id, 'full')) : ''; ?>">
+                <source src="<?php echo esc_url($hero_video); ?>" type="video/mp4">
+            </video>
+        <?php elseif ($hero_image_id): ?>
+            <img src="<?php echo esc_url(wp_get_attachment_image_url($hero_image_id, 'full')); ?>" alt="<?php echo esc_attr(get_the_title()); ?>">
+        <?php else: ?>
+            <div style="width:100%;height:100%;background:linear-gradient(135deg,var(--event-primary),var(--event-secondary));"></div>
+        <?php endif; ?>
+    </div>
+    <div class="event-hero__overlay"></div>
+    <div class="event-hero__pattern"></div>
+
+    <div class="event-hero__content">
+        <?php if ($event_logo_id): ?>
+            <div class="event-hero__logo">
+                <?php echo wp_get_attachment_image($event_logo_id, 'medium', false, ['alt' => get_the_title()]); ?>
+            </div>
+        <?php endif; ?>
+
+        <span class="event-hero__badge"><?php echo esc_html($tagline); ?></span>
+        <h1 class="event-hero__title"><?php the_title(); ?></h1>
+
+        <?php if ($short_desc): ?>
+            <p class="event-hero__subtitle"><?php echo esc_html($short_desc); ?></p>
+        <?php endif; ?>
+
+        <?php if ($event_date_raw): ?>
+        <div class="event-hero__dateblock">
+            <div class="event-hero__datebox">
+                <span class="day"><?php echo esc_html($event_day); ?></span>
+                <span class="month"><?php echo esc_html($event_month); ?></span>
+            </div>
+            <div class="event-hero__dateinfo">
+                <span class="time"><?php echo esc_html($event_time); ?><?php echo $event_end_time ? ' &ndash; ' . esc_html($event_end_time) : ''; ?></span>
+                <span class="location"><?php echo esc_html($event_location); ?></span>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <div class="event-hero__actions">
+            <?php if ($cta_link): ?>
+                <a href="<?php echo esc_url($cta_link); ?>" class="event-btn"><?php echo esc_html($cta_text); ?></a>
+            <?php endif; ?>
+            <?php if ($cta_secondary_link): ?>
+                <a href="<?php echo esc_url($cta_secondary_link); ?>" class="event-btn event-btn-outline"><?php echo esc_html($cta_secondary_text); ?></a>
+            <?php endif; ?>
+        </div>
+
+        <?php if ($countdown_target): ?>
+        <div class="event-countdown" data-target="<?php echo esc_attr($countdown_target); ?>">
+            <div class="event-countdown__box"><span class="event-countdown__number" data-unit="days">00</span><span class="event-countdown__label">Days</span></div>
+            <div class="event-countdown__box"><span class="event-countdown__number" data-unit="hours">00</span><span class="event-countdown__label">Hours</span></div>
+            <div class="event-countdown__box"><span class="event-countdown__number" data-unit="minutes">00</span><span class="event-countdown__label">Minutes</span></div>
+            <div class="event-countdown__box"><span class="event-countdown__number" data-unit="seconds">00</span><span class="event-countdown__label">Seconds</span></div>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <div class="event-hero__scroll"><span></span></div>
+</section>
+
+<!-- ════════════════════════════════════════
+     QUICK INFO BAR
+     ════════════════════════════════════════ -->
+<?php if ($event_date_raw || $event_time || $event_location || $event_cost): ?>
+<section class="event-infobar">
+    <div class="event-infobar__grid">
+        <?php if ($event_date_display): ?>
+        <div class="event-infobar__item">
+            <svg class="event-infobar__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <div class="event-infobar__label">Date</div>
+            <div class="event-infobar__value"><?php echo esc_html($event_date_display); ?></div>
+        </div>
+        <?php endif; ?>
+        <?php if ($event_time): ?>
+        <div class="event-infobar__item">
+            <svg class="event-infobar__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div class="event-infobar__label">Time</div>
+            <div class="event-infobar__value"><?php echo esc_html($event_time); ?><?php echo $event_end_time ? ' &ndash; ' . esc_html($event_end_time) : ''; ?></div>
+        </div>
+        <?php endif; ?>
+        <?php if ($event_location): ?>
+        <div class="event-infobar__item">
+            <svg class="event-infobar__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <div class="event-infobar__label">Location</div>
+            <div class="event-infobar__value"><?php echo esc_html($event_location); ?></div>
+        </div>
+        <?php endif; ?>
+        <?php if ($event_cost): ?>
+        <div class="event-infobar__item">
+            <svg class="event-infobar__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+            <div class="event-infobar__label">Admission</div>
+            <div class="event-infobar__value"><?php echo esc_html($event_cost); ?></div>
+        </div>
+        <?php endif; ?>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ════════════════════════════════════════
+     ABOUT / DESCRIPTION
+     ════════════════════════════════════════ -->
+<?php if ($long_desc): ?>
+<section class="event-section event-section--white">
+    <div class="event-about__grid event-reveal">
+        <div class="event-about__image">
+            <?php if ($hero_image_id): ?>
+                <img src="<?php echo esc_url(wp_get_attachment_image_url($hero_image_id, 'large')); ?>" alt="<?php echo esc_attr(get_the_title()); ?>">
+            <?php endif; ?>
+        </div>
+        <div>
+            <span class="event-section-label">About the Event</span>
+            <h2 class="event-section-title" style="color: var(--event-dark);">What to Expect</h2>
+            <div class="event-about__text event-body">
+                <?php echo wp_kses_post($long_desc); ?>
+            </div>
+            <?php if ($cta_link): ?>
+                <a href="<?php echo esc_url($cta_link); ?>" class="event-btn" style="margin-top: 1.5rem;"><?php echo esc_html($cta_text); ?></a>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ════════════════════════════════════════
+     SCHEDULE
+     ════════════════════════════════════════ -->
+<?php if (!empty($schedule)): ?>
+<section class="event-section event-section--dark">
+    <div class="event-reveal">
+        <div style="text-align: center; margin-bottom: 3rem;">
+            <span class="event-section-label">Plan Your Day</span>
+            <h2 class="event-section-title">Event Schedule</h2>
+        </div>
+        <div class="event-schedule__wrap">
+            <?php foreach ($schedule as $item): 
+                if (empty($item['time']) && empty($item['activity'])) continue;
+            ?>
+            <div class="event-schedule__item">
+                <div class="event-schedule__time"><?php echo esc_html($item['time'] ?? ''); ?></div>
+                <div class="event-schedule__details">
+                    <h4><?php echo esc_html($item['activity'] ?? ''); ?></h4>
+                    <?php if (!empty($item['description'])): ?>
+                        <p><?php echo esc_html($item['description']); ?></p>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ════════════════════════════════════════
+     BRING / LEAVE
+     ════════════════════════════════════════ -->
+<?php if (!empty($bring_items) || !empty($leave_items)): ?>
+<section class="event-section event-section--white" style="padding-top: 3rem; padding-bottom: 3rem;">
+    <div class="event-rules__grid event-reveal">
+        <?php if (!empty($bring_items)): ?>
+        <div class="event-rules__box event-rules__box--bring">
+            <h3>
+                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Bring
+            </h3>
+            <ul>
+                <?php foreach ($bring_items as $item): 
+                    if (empty($item['item'])) continue;
+                ?>
+                    <li><?php echo esc_html($item['item']); ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($leave_items)): ?>
+        <div class="event-rules__box event-rules__box--leave">
+            <h3>
+                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                Leave at Home
+            </h3>
+            <ul>
+                <?php foreach ($leave_items as $item): 
+                    if (empty($item['item'])) continue;
+                ?>
+                    <li><?php echo esc_html($item['item']); ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php endif; ?>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ════════════════════════════════════════
+     PARKING
+     ════════════════════════════════════════ -->
+<?php if ($parking_info): ?>
+<section class="event-section event-section--light">
+    <div class="event-reveal" style="max-width: 800px; margin: 0 auto; text-align: center;">
+        <span class="event-section-label">Getting Here</span>
+        <h2 class="event-section-title" style="color: var(--event-dark);">Parking & Shuttles</h2>
+        <div class="event-body" style="font-size: 1.1rem;">
+            <?php echo wp_kses_post($parking_info); ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ════════════════════════════════════════
+     MAP
+     ════════════════════════════════════════ -->
+<?php if ($map_embed || $map_image_id): ?>
+<section class="event-section event-section--primary" style="padding: 0;">
+    <div class="event-map__wrap event-reveal">
+        <?php if ($map_embed): ?>
+            <?php echo $map_embed; ?>
+        <?php elseif ($map_image_id): ?>
+            <img src="<?php echo esc_url(wp_get_attachment_image_url($map_image_id, 'large')); ?>" alt="Event Map" style="width:100%;height:auto;display:block;">
+        <?php endif; ?>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ════════════════════════════════════════
+     VENDORS / VOLUNTEER
+     ════════════════════════════════════════ -->
+<?php if ($vendors_text || $volunteer_link): ?>
+<section class="event-section event-section--secondary">
+    <div class="event-reveal">
+        <div style="text-align: center; margin-bottom: 3rem;">
+            <span class="event-section-label">Get Involved</span>
+            <h2 class="event-section-title">Participate</h2>
+        </div>
+        <div class="event-cta-grid">
+            <?php if ($vendors_text): ?>
+            <div class="event-cta-card event-cta-card--primary">
+                <div style="position:absolute;top:0;left:0;width:100%;height:6px;background:var(--event-accent);"></div>
+                <h3>Vendors</h3>
+                <p><?php echo esc_html($vendors_text); ?></p>
+                <?php if ($vendor_link): ?>
+                    <a href="<?php echo esc_url($vendor_link); ?>" class="event-btn event-btn-outline" style="font-size: 0.8rem; padding: 0.6rem 1.2rem;">Apply Now</a>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+            <?php if ($volunteer_link): ?>
+            <div class="event-cta-card event-cta-card--accent">
+                <div style="position:absolute;top:0;left:0;width:100%;height:6px;background:var(--event-dark);"></div>
+                <h3 style="color: var(--event-dark);">Volunteers</h3>
+                <p style="color: var(--event-dark);">Join our team and help make this event unforgettable. Great for groups and individuals!</p>
+                <a href="<?php echo esc_url($volunteer_link); ?>" class="event-btn" style="background: var(--event-dark); border-color: var(--event-dark); color: var(--event-white); font-size: 0.8rem; padding: 0.6rem 1.2rem;">Sign Up</a>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ════════════════════════════════════════
+     SPONSORS
+     ════════════════════════════════════════ -->
+<?php 
+$clean_sponsors = array_filter($sponsors ?? [], function($s) { return !empty($s['name']); });
+?>
+<?php if (!empty($clean_sponsors)): ?>
+<section class="event-section event-section--primary" style="padding: 4rem 0; overflow: hidden;">
+    <div style="text-align: center; margin-bottom: 2.5rem; padding: 0 1.5rem;">
+        <span class="event-section-label">Partners</span>
+        <h2 class="event-section-title">Our Sponsors</h2>
+    </div>
+    
+    <div class="event-sponsors-marquee">
+        <div class="event-sponsors-track" id="sponsorTrack">
+            <?php foreach ($clean_sponsors as $sponsor): 
+                $sponsor_img = !empty($sponsor['image_id']) ? wp_get_attachment_image_url(intval($sponsor['image_id']), 'medium') : '';
+            ?>
+                <div class="event-sponsor-item">
+                    <?php if ($sponsor_img): ?>
+                        <img src="<?php echo esc_url($sponsor_img); ?>" alt="<?php echo esc_attr($sponsor['name']); ?>" loading="lazy">
+                    <?php else: ?>
+                        <span class="event-sponsor-name"><?php echo esc_html($sponsor['name']); ?></span>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ════════════════════════════════════════
+     GALLERY
+     ════════════════════════════════════════ -->
+<?php if (!empty($gallery_images)): ?>
+<section class="event-section event-section--white" style="padding: 3rem 0.5rem;">
+    <div class="event-reveal">
+        <div style="text-align: center; margin-bottom: 2rem; padding: 0 1.5rem;">
+            <span class="event-section-label" style="background: var(--event-primary); color: var(--event-white);">Memories</span>
+            <h2 class="event-section-title" style="color: var(--event-dark);">Photo Gallery</h2>
+        </div>
+        <div class="event-gallery__grid">
+            <?php foreach ($gallery_images as $img): ?>
+            <div class="event-gallery__item">
+                <img src="<?php echo esc_url($img['url']); ?>" alt="<?php echo esc_attr($img['alt'] ?: 'Event photo'); ?>" loading="lazy">
+                <div class="event-gallery__overlay">
+                    <span class="event-gallery__caption"><?php echo esc_html($img['caption'] ?: 'View'); ?></span>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ════════════════════════════════════════
+     FAQ
+     ════════════════════════════════════════ -->
+<?php if (!empty($faq_items)): ?>
+<section class="event-section event-section--dark">
+    <div class="event-reveal" style="max-width: 800px; margin: 0 auto;">
+        <div style="text-align: center; margin-bottom: 3rem;">
+            <span class="event-section-label">Questions?</span>
+            <h2 class="event-section-title">FAQ</h2>
+        </div>
+        <?php foreach ($faq_items as $faq): 
+            if (empty($faq['question'])) continue;
+        ?>
+        <details class="event-faq__item">
+            <summary class="event-faq__question"><?php echo esc_html($faq['question']); ?></summary>
+            <div class="event-faq__answer event-body"><?php echo wp_kses_post($faq['answer'] ?? ''); ?></div>
+        </details>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ════════════════════════════════════════
+     AWARDS
+     ════════════════════════════════════════ -->
+<?php if (!empty($awards)): ?>
+<section class="event-section event-section--accent">
+    <div class="event-reveal" style="text-align: center;">
+        <span class="event-section-label" style="background: var(--event-dark); color: var(--event-white);">Recognition</span>
+        <h2 class="event-section-title" style="color: var(--event-dark); margin-bottom: 2rem;">Award Winning</h2>
+        <div class="event-awards__list">
+            <?php foreach ($awards as $award): ?>
+                <span class="event-awards__badge"><?php echo esc_html($award); ?></span>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ════════════════════════════════════════
+     MERCH
+     ════════════════════════════════════════ -->
+<?php if ($merch_text): ?>
+<section class="event-section event-section--light">
+    <div class="event-reveal" style="max-width: 700px; margin: 0 auto; text-align: center;">
+        <span class="event-section-label">Gear Up</span>
+        <h2 class="event-section-title" style="color: var(--event-dark);">Official Merch</h2>
+        <p class="event-body" style="font-size: 1.1rem; margin-bottom: 2rem;"><?php echo esc_html($merch_text); ?></p>
+        <?php if ($merch_link): ?>
+            <a href="<?php echo esc_url($merch_link); ?>" class="event-btn">Shop Now</a>
+        <?php endif; ?>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ════════════════════════════════════════
+     FOOTER CTA
+     ════════════════════════════════════════ -->
+<?php if ($cta_link || $volunteer_link): ?>
+<section class="event-footercta">
+    <div class="event-reveal">
+        <h2 class="event-footercta__title"><?php echo esc_html($cta_text); ?></h2>
+        <p class="event-footercta__text">Don't miss out on the biggest event of the season. Grab your spot today!</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; position: relative;">
+            <?php if ($cta_link): ?>
+                <a href="<?php echo esc_url($cta_link); ?>" class="event-btn" style="background: var(--event-white); color: var(--event-primary); border-color: var(--event-white);"><?php echo esc_html($cta_text); ?></a>
+            <?php endif; ?>
+            <?php if ($volunteer_link): ?>
+                <a href="<?php echo esc_url($volunteer_link); ?>" class="event-btn event-btn-outline">Volunteer</a>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+</main><!-- /.event-page -->
+
+<script>
+(function() {
+    'use strict';
+
+    // Scroll reveal
+    var reveals = document.querySelectorAll('.event-reveal');
+    if ('IntersectionObserver' in window) {
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) entry.target.classList.add('visible');
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+        reveals.forEach(function(el) { observer.observe(el); });
+    } else {
+        reveals.forEach(function(el) { el.classList.add('visible'); });
+    }
+
+    // Countdown timer
+    var countdown = document.querySelector('.event-countdown');
+    if (countdown) {
+        var target = new Date(countdown.dataset.target).getTime();
+        var units = countdown.querySelectorAll('.event-countdown__number');
+        function updateCountdown() {
+            var now = new Date().getTime();
+            var diff = target - now;
+            if (diff < 0) diff = 0;
+            var d = Math.floor(diff / (1000 * 60 * 60 * 24));
+            var h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            var m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            var s = Math.floor((diff % (1000 * 60)) / 1000);
+            units.forEach(function(u) {
+                var unit = u.dataset.unit;
+                if (unit === 'days') u.textContent = String(d).padStart(2, '0');
+                if (unit === 'hours') u.textContent = String(h).padStart(2, '0');
+                if (unit === 'minutes') u.textContent = String(m).padStart(2, '0');
+                if (unit === 'seconds') u.textContent = String(s).padStart(2, '0');
+            });
+        }
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    }
+})();
+
+// Sponsor marquee: clone until track is wide enough, then animate
+(function() {
+    var track = document.getElementById('sponsorTrack');
+    if (!track) return;
+
+    var marquee = track.parentElement;
+    var originalHTML = track.innerHTML;
+
+    // Clone items until track is at least 2x viewport width
+    function fillTrack() {
+        while (track.scrollWidth < marquee.offsetWidth * 2) {
+            track.innerHTML += originalHTML;
+        }
+    }
+    fillTrack();
+
+    // Recalculate on resize (in case viewport grows)
+    window.addEventListener('resize', function() {
+        // Reset and refill
+        track.innerHTML = originalHTML;
+        fillTrack();
+        setAnimationDuration();
+    });
+
+    // Set duration so speed is constant (~60px/sec) regardless of content length
+    function setAnimationDuration() {
+        var oneLoopWidth = track.scrollWidth / 2;
+        var speed = 60; // pixels per second
+        var duration = oneLoopWidth / speed;
+        track.style.animation = 'eventSponsorScroll ' + duration + 's linear infinite';
+    }
+
+    // Wait for images to load before measuring
+    if (track.querySelector('img')) {
+        var imgs = track.querySelectorAll('img');
+        var loaded = 0;
+        imgs.forEach(function(img) {
+            if (img.complete) {
+                loaded++;
+            } else {
+                img.addEventListener('load', function() {
+                    loaded++;
+                    if (loaded === imgs.length) setAnimationDuration();
+                });
+                img.addEventListener('error', function() {
+                    loaded++;
+                    if (loaded === imgs.length) setAnimationDuration();
+                });
+            }
+        });
+        if (loaded === imgs.length) setAnimationDuration();
+    } else {
+        setAnimationDuration();
+    }
+})();
+</script>
+
+<?php get_footer(); ?>
