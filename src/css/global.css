@@ -76,6 +76,10 @@ body {
     width: 100vw;
 }
 
+h1,h2,h3,h4,h5 {
+    font-family: 'ivyepic-variable', 'Arial Narrow', Impact, sans-serif !important;
+    text-transform: uppercase !important;
+}
 /* ============================================
    WORDPRESS CORE — SCREEN READER
    ============================================ */

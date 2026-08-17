@@ -221,6 +221,7 @@ if ($awards_text) {
    HERO
    ════════════════════════════════════════ */
 .event-hero {
+    padding: 1rem 0 10rem 0;
     position: relative;
     min-height: 90vh;
     display: flex;
@@ -358,6 +359,7 @@ if ($awards_text) {
     transform: translateX(-50%);
     z-index: 10;
     animation: eventBounce 2s infinite;
+    margin-bottom: 2rem;
 }
 .event-hero__scroll span {
     display: block;
@@ -917,6 +919,205 @@ if ($awards_text) {
     .event-cta-grid { grid-template-columns: 1fr; }
     .event-gallery__grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ════════════════════════════════════════
+   QUICK INFO BAR - ICONS OVERLAP HERO
+   ════════════════════════════════════════ */
+.event-infobar {
+    background: transparent;
+    padding: 0;
+    position: relative;
+    z-index: 20;
+    margin-top: -35px;
+    pointer-events: none;
+    padding-bottom: 2rem;
+}
+
+.event-infobar__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    gap: 0.75rem;
+    pointer-events: none;
+}
+@media (min-width: 768px) {
+    .event-infobar__grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        padding: 0 2rem;
+    }
+}
+
+.event-infobar__item {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 2rem 1rem 1.25rem;
+    text-align: center;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    pointer-events: auto;
+    position: relative;
+    overflow: visible;
+}
+
+.event-infobar__item:hover {
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid var(--event-accent);
+    box-shadow: 0 1px 15px var(--event-accent);
+}
+
+/* Only the icon wraps overlap upward */
+.event-infobar__icon-wrap {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 0.75rem;
+    margin-top: -52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--event-primary);
+    border-radius: 50%;
+    padding: 14px;
+    transition: all 0.4s ease;
+    border: 3px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    position: relative;
+    z-index: 2;
+}
+
+@media (min-width: 768px) {
+    .event-infobar__icon-wrap {
+        width: 80px;
+        height: 80px;
+        margin-top: -56px;
+        padding: 16px;
+    }
+}
+
+.event-infobar__item:hover .event-infobar__icon-wrap {
+    transform: translateY(-6px) scale(1.15);
+    border-color: var(--event-accent);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2), 0 0 40px rgba(255, 215, 0, 0.15);
+}
+
+.event-infobar__icon {
+    width: 100%;
+    height: 100%;
+    color: var(--event-white);
+    stroke: currentColor;
+    stroke-width: 1.5;
+    fill: none;
+    transition: all 0.4s ease;
+}
+
+.event-infobar__item:hover .event-infobar__icon {
+    color: var(--event-accent);
+    transform: scale(1.05);
+}
+
+/* ─── LABEL & VALUE ─── */
+.event-infobar__label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(0, 0, 0, 0.4);
+    margin-bottom: 0.3rem;
+    font-family: var(--font-headline);
+    margin-top: 0.5rem;
+}
+
+.event-infobar__value {
+    font-family: var(--font-headline);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--event-dark);
+    line-height: 1.3;
+}
+
+@media (min-width: 768px) {
+    .event-infobar__value {
+        font-size: 1.1rem;
+    }
+}
+/* Dark background variants */
+.event-infobar--transition-dark::after {
+    background: linear-gradient(to bottom, transparent, var(--event-dark));
+}
+
+.event-infobar--transition-primary::after {
+    background: linear-gradient(to bottom, transparent, var(--event-primary));
+}
+
+.event-infobar--transition-secondary::after {
+    background: linear-gradient(to bottom, transparent, var(--event-secondary));
+}
+
+.event-infobar--transition-light::after {
+    background: linear-gradient(to bottom, transparent, var(--event-light));
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 640px) {
+    .event-infobar {
+        margin-top: -25px;
+    }
+    
+    .event-infobar__grid {
+        gap: 0.5rem;
+        padding: 0 0.75rem;
+    }
+    
+    .event-infobar__item {
+        padding: 1.5rem 0.75rem 1rem;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.95);
+    }
+    
+    .event-infobar__icon-wrap {
+        width: 56px;
+        height: 56px;
+        margin-top: -40px;
+        padding: 10px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .event-infobar__value {
+        font-size: 0.8rem;
+    }
+    
+    .event-infobar__label {
+        font-size: 0.6rem;
+        margin-top: 0.25rem;
+    }
+    
+    .event-infobar::after {
+        height: 30px;
+    }
+}
+
+@media (max-width: 400px) {
+    .event-infobar {
+        margin-top: -20px;
+    }
+    
+    .event-infobar__icon-wrap {
+        width: 48px;
+        height: 48px;
+        margin-top: -34px;
+        padding: 8px;
+    }
+    
+    .event-infobar__item {
+        background: rgba(255, 255, 255, 0.98);
+    }
+}
 </style>
 
 <main class="event-page">
@@ -988,36 +1189,62 @@ if ($awards_text) {
     <div class="event-hero__scroll"><span></span></div>
 </section>
 
-<!-- ════════════════════════════════════════
-     QUICK INFO BAR
-     ════════════════════════════════════════ -->
 <?php if ($event_date_raw || $event_time || $event_location || $event_cost): ?>
 <section class="event-infobar">
     <div class="event-infobar__grid">
         <?php if ($event_date_display): ?>
         <div class="event-infobar__item">
-            <svg class="event-infobar__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <div class="event-infobar__icon-wrap">
+                <svg class="event-infobar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                    <path d="M8 14h.01"></path>
+                    <path d="M12 14h.01"></path>
+                    <path d="M16 14h.01"></path>
+                    <path d="M8 18h.01"></path>
+                    <path d="M12 18h.01"></path>
+                    <path d="M16 18h.01"></path>
+                </svg>
+            </div>
             <div class="event-infobar__label">Date</div>
             <div class="event-infobar__value"><?php echo esc_html($event_date_display); ?></div>
         </div>
         <?php endif; ?>
         <?php if ($event_time): ?>
         <div class="event-infobar__item">
-            <svg class="event-infobar__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div class="event-infobar__icon-wrap">
+                <svg class="event-infobar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+            </div>
             <div class="event-infobar__label">Time</div>
             <div class="event-infobar__value"><?php echo esc_html($event_time); ?><?php echo $event_end_time ? ' &ndash; ' . esc_html($event_end_time) : ''; ?></div>
         </div>
         <?php endif; ?>
         <?php if ($event_location): ?>
         <div class="event-infobar__item">
-            <svg class="event-infobar__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <div class="event-infobar__icon-wrap">
+                <svg class="event-infobar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+            </div>
             <div class="event-infobar__label">Location</div>
             <div class="event-infobar__value"><?php echo esc_html($event_location); ?></div>
         </div>
         <?php endif; ?>
         <?php if ($event_cost): ?>
         <div class="event-infobar__item">
-            <svg class="event-infobar__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+            <div class="event-infobar__icon-wrap">
+                <svg class="event-infobar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M8 12h8"></path>
+                    <path d="M12 8v8"></path>
+                </svg>
+            </div>
             <div class="event-infobar__label">Admission</div>
             <div class="event-infobar__value"><?php echo esc_html($event_cost); ?></div>
         </div>
@@ -1149,6 +1376,16 @@ if ($awards_text) {
     </div>
 </section>
 <?php endif; ?>
+
+<section id="content" class="py-8 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <?php
+        while ( have_posts() ) : the_post();
+            the_content();
+        endwhile;
+        ?>
+    </div>
+</section>
 
 <!-- ════════════════════════════════════════
      VENDORS / VOLUNTEER

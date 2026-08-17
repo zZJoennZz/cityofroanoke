@@ -1106,17 +1106,17 @@ class Roanoke_Event_Meta_Box {
 
         // Defensive: don't save event data if the template has changed away from the event template
         $template = visit_roanoke_get_effective_template( $post_id );
-        if ( $template !== 'page-event.php' ) { // Change this to match your event template filename
+        if ( $template !== 'page-event.php' ) {
             return;
         }
 
-        // … rest of your existing save logic …
+        // Plain text fields (no HTML allowed)
         $text_fields = [
             'color_scheme', 'color_primary', 'color_secondary', 'color_accent', 'color_dark', 'color_light',
             'logo_id', 'tagline',
             'hero_image_id', 'hero_video', 'short_desc',
             'date', 'time', 'end_time', 'location', 'address', 'cost', 'countdown',
-            'map_embed', 'map_image_id',
+            'map_image_id',
             'vendors_text', 'vendor_link', 'volunteer_link',
             'gallery_ids', 'awards', 'merch_text', 'merch_link',
             'cta_text', 'cta_link', 'cta_secondary_text', 'cta_secondary_link',
@@ -1129,13 +1129,43 @@ class Roanoke_Event_Meta_Box {
             }
         }
 
-        foreach ( ['long_desc', 'parking'] as $field ) {
+        // HTML fields (allow safe HTML including iframes)
+        $html_fields = ['map_embed', 'long_desc', 'parking'];
+        foreach ( $html_fields as $field ) {
             $key = $this->prefix . $field;
             if ( isset( $_POST['event_' . $field] ) ) {
-                update_post_meta( $post_id, $key, wp_kses_post( wp_unslash( $_POST['event_' . $field] ) ) );
+                // wp_kses_post allows safe HTML but STRIPS iframes by default
+                // Use wp_kses with custom allowed tags to preserve iframes
+                $allowed_html = wp_kses_allowed_html( 'post' );
+                
+                // Add iframe and its attributes to allowed tags
+                $allowed_html['iframe'] = [
+                    'src'             => true,
+                    'width'           => true,
+                    'height'          => true,
+                    'frameborder'     => true,
+                    'allowfullscreen' => true,
+                    'allow'           => true,
+                    'style'           => true,
+                    'class'           => true,
+                    'id'              => true,
+                    'name'            => true,
+                    'sandbox'         => true,
+                    'scrolling'       => true,
+                    'title'           => true,
+                ];
+                
+                // Also allow these tags just in case
+                $allowed_html['script'] = [
+                    'src' => true,
+                    'type' => true,
+                ];
+                
+                update_post_meta( $post_id, $key, wp_kses( wp_unslash( $_POST['event_' . $field] ), $allowed_html ) );
             }
         }
 
+        // Repeater fields
         $arrays = ['schedule', 'bring', 'leave', 'faq', 'sponsors'];
         foreach ( $arrays as $arr ) {
             $key = $this->prefix . $arr;
@@ -1191,8 +1221,6 @@ add_action( 'wp_enqueue_scripts', 'visit_roanoke_enqueue_interior_styles', 20 );
  * ----------------------------------------------------
  * 2. ADD CUSTOM META BOX FOR INTERIOR PAGE SETTINGS
  * ----------------------------------------------------
- * Adds fields to pages so editors can customize the hero,
-   filters, CTA, and intro content without touching code.
  */
 add_action( 'add_meta_boxes', function( $post_type, $post ) {
     if ( $post_type !== 'page' ) {
