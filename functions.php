@@ -608,15 +608,148 @@ class Roanoke_Event_Meta_Box {
         $leave        = $this->get_arr($post->ID, 'leave');
         $faq          = $this->get_arr($post->ID, 'faq');
         $sponsors     = $this->get_arr($post->ID, 'sponsors');
+        $participate  = $this->get_arr($post->ID, 'participate');
 
-        if (empty($schedule)) $schedule = [['time' => '', 'activity' => '', 'description' => '']];
+        if (empty($schedule)) {
+            $schedule = [
+                [
+                    'name'  => '',
+                    'items' => [
+                        [
+                            'time'     => '',
+                            'activity' => '',
+                            'location' => '',
+                        ],
+                    ],
+                ],
+            ];
+        } elseif (isset($schedule[0]['time']) || isset($schedule[0]['activity']) || isset($schedule[0]['description'])) {
+            // Convert old flat schedule items into one schedule block.
+            $legacy_items = [];
+
+            foreach ($schedule as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+
+                $legacy_items[] = [
+                    'time'     => $item['time'] ?? '',
+                    'activity' => $item['activity'] ?? '',
+                    'location' => $item['location'] ?? ($item['description'] ?? ''),
+                ];
+            }
+
+            $schedule = [
+                [
+                    'name'  => '',
+                    'items' => !empty($legacy_items)
+                        ? $legacy_items
+                        : [
+                            [
+                                'time'     => '',
+                                'activity' => '',
+                                'location' => '',
+                            ],
+                        ],
+                ],
+            ];
+        }
         if (empty($bring))    $bring    = [['item' => '']];
         if (empty($leave))    $leave    = [['item' => '']];
         if (empty($faq))      $faq      = [['question' => '', 'answer' => '']];
-        if (empty($sponsors)) $sponsors = [['image_id' => '', 'name' => '', 'link' => '']];
+        if (empty($sponsors)) $sponsors = [['image_id' => '', 'name' => '', 'link' => '', 'bio' => '', 'facebook' => '', 'instagram' => '', 'tiktok' => '', 'twitter' => '', 'youtube' => '']];
+        if (empty($participate)) $participate = [['title' => '', 'description' => '', 'link_text' => '', 'link_url' => '', 'color_scheme' => 'primary']];
+        
+        $color_schemes = [
+            'primary'          => 'Primary (Event Primary Color)',
+            'secondary'        => 'Secondary (Event Secondary Color)',
+            'accent'           => 'Accent (Event Accent Color)',
+            'background'       => 'Background (Event Background Color)',
+            'dark_text'        => 'Dark Text (Event Dark Text Color)',
+            'optional_accent'  => 'Optional Accent (Event Optional Accent Color)',
+            'white'            => 'White',
+        ];
         ?>
 
         <style>
+        /* Schedule Blocks */
+        .roanoke-schedule-block {
+            background: #f6f7f7;
+            border: 1px solid #c3c4c7;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .roanoke-schedule-block-header {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #dcdcde;
+        }
+
+        .roanoke-schedule-block-header input {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .roanoke-schedule-block-remove {
+            background: #d63638 !important;
+            color: #fff !important;
+            border-color: #d63638 !important;
+        }
+
+        .roanoke-schedule-item {
+            background: #fff;
+            border: 1px solid #dcdcde;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .roanoke-schedule-item-fields {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .roanoke-schedule-item-fields label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .roanoke-schedule-item-fields input {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .roanoke-schedule-item-remove {
+            background: #d63638 !important;
+            color: #fff !important;
+            border-color: #d63638 !important;
+        }
+
+        .roanoke-schedule-item-add {
+            margin-top: 5px !important;
+        }
+
+        .roanoke-schedule-block-add {
+            margin-top: 5px !important;
+        }
+
+        @media (max-width: 782px) {
+            .roanoke-schedule-block-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .roanoke-schedule-item-fields {
+                grid-template-columns: 1fr;
+            }
+        }
         .roanoke-meta-wrap { padding: 10px 0; }
         .roanoke-meta-section { margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #e0e0e0; }
         .roanoke-meta-section h3 { margin: 0 0 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: #1d2327; }
@@ -628,14 +761,37 @@ class Roanoke_Event_Meta_Box {
         .roanoke-repeater-item--faq input,
         .roanoke-repeater-item--faq textarea { width: 100%; box-sizing: border-box; }
         .roanoke-repeater-item--faq .roanoke-repeater-remove { align-self: flex-end; }
-        .roanoke-repeater-item--sponsor { flex-direction: column; align-items: stretch; gap: 8px; }
+        .roanoke-repeater-item--sponsor { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; background: #f0f0f1; border: 1px solid #b0b0b0; margin-bottom: 10px; }
         .roanoke-repeater-item--sponsor .roanoke-media-field { justify-content: flex-start; flex-wrap: wrap; }
-        .roanoke-repeater-item--sponsor input { width: 100%; box-sizing: border-box; }
+        .roanoke-repeater-item--sponsor input,
+        .roanoke-repeater-item--sponsor textarea { width: 100%; box-sizing: border-box; margin-bottom: 4px; }
+        .roanoke-repeater-item--sponsor .sponsor-social-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .roanoke-repeater-item--sponsor .sponsor-social-row input { width: calc(33.33% - 6px); min-width: 120px; }
+        .roanoke-repeater-item--sponsor .sponsor-bio-row textarea { width: 100%; }
         .roanoke-repeater-item--sponsor .roanoke-repeater-remove { align-self: flex-end; }
+        .roanoke-repeater-item--participate {
+            flex-direction: column;
+            align-items: stretch;
+            padding: 12px;
+            background: #f0f8ff;
+            border: 1px solid #b0d4e8;
+            margin-bottom: 10px;
+        }
+        .roanoke-repeater-item--participate input,
+        .roanoke-repeater-item--participate textarea,
+        .roanoke-repeater-item--participate select {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .roanoke-repeater-item--participate .roanoke-repeater-remove {
+            align-self: flex-end;
+            margin-top: 8px;
+        }
         .roanoke-repeater-remove { background: #d63638 !important; color: #fff !important; border-color: #d63638 !important; min-width: 32px; cursor: pointer; }
         .roanoke-gallery-preview { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
         .roanoke-gallery-preview img { width: 80px; height: 80px; object-fit: cover; border: 2px solid #c3c4c7; }
         .roanoke-repeater-add { margin-top: 6px !important; }
+        .sponsor-social-label { font-size: 11px; font-weight: 600; color: #555; display: block; margin-top: 2px; }
         </style>
 
         <div class="roanoke-meta-wrap">
@@ -657,15 +813,16 @@ class Roanoke_Event_Meta_Box {
                     </tr>
                 </table>
 
-                <div id="custom-colors" style="display:<?php echo $scheme === 'custom' ? 'block' : 'none'; ?>;">
-                    <table class="form-table">
-                        <tr><th>Primary</th><td><input type="color" name="event_color_primary"   value="<?php echo esc_attr($this->get($post->ID, 'color_primary',   '#D97706')); ?>" style="width:60px;height:36px;"></td></tr>
-                        <tr><th>Secondary</th><td><input type="color" name="event_color_secondary" value="<?php echo esc_attr($this->get($post->ID, 'color_secondary', '#7C2D12')); ?>" style="width:60px;height:36px;"></td></tr>
-                        <tr><th>Accent</th><td><input type="color" name="event_color_accent"    value="<?php echo esc_attr($this->get($post->ID, 'color_accent',    '#FCD34D')); ?>" style="width:60px;height:36px;"></td></tr>
-                        <tr><th>Dark</th><td><input type="color" name="event_color_dark"      value="<?php echo esc_attr($this->get($post->ID, 'color_dark',      '#1F2937')); ?>" style="width:60px;height:36px;"></td></tr>
-                        <tr><th>Light</th><td><input type="color" name="event_color_light"     value="<?php echo esc_attr($this->get($post->ID, 'color_light',     '#FEF3C7')); ?>" style="width:60px;height:36px;"></td></tr>
-                    </table>
-                </div>
+                    <div id="custom-colors" style="display:<?php echo $scheme === 'custom' ? 'block' : 'none'; ?>;">
+                        <table class="form-table">
+                            <tr><th>Primary</th><td><input type="color" name="event_color_primary"   value="<?php echo esc_attr($this->get($post->ID, 'color_primary',   '#D97706')); ?>" style="width:60px;height:36px;"></td></tr>
+                            <tr><th>Secondary</th><td><input type="color" name="event_color_secondary" value="<?php echo esc_attr($this->get($post->ID, 'color_secondary', '#7C2D12')); ?>" style="width:60px;height:36px;"></td></tr>
+                            <tr><th>Accent</th><td><input type="color" name="event_color_accent"    value="<?php echo esc_attr($this->get($post->ID, 'color_accent',    '#FCD34D')); ?>" style="width:60px;height:36px;"></td></tr>
+                            <tr><th>Background</th><td><input type="color" name="event_color_background" value="<?php echo esc_attr($this->get($post->ID, 'color_background', '#FFFFFF')); ?>" style="width:60px;height:36px;"></td></tr>
+                            <tr><th>Dark Text</th><td><input type="color" name="event_color_dark_text" value="<?php echo esc_attr($this->get($post->ID, 'color_dark_text', '#1F2937')); ?>" style="width:60px;height:36px;"></td></tr>
+                            <tr><th>Optional Accent</th><td><input type="color" name="event_color_optional_accent" value="<?php echo esc_attr($this->get($post->ID, 'color_optional_accent', '#3B82F6')); ?>" style="width:60px;height:36px;"></td></tr>
+                        </table>
+                    </div>
 
                 <table class="form-table">
                     <tr>
@@ -750,19 +907,131 @@ class Roanoke_Event_Meta_Box {
             <!-- SCHEDULE -->
             <div class="roanoke-meta-section">
                 <h3>Event Schedule</h3>
-                <div class="roanoke-repeater" data-field="schedule">
-                    <div class="roanoke-repeater-items">
-                        <?php foreach ($schedule as $i => $item) : ?>
-                        <div class="roanoke-repeater-item">
-                            <input type="text" name="event_schedule[<?php echo $i; ?>][time]" value="<?php echo esc_attr($item['time'] ?? ''); ?>" placeholder="5:00 PM" class="small-text">
-                            <input type="text" name="event_schedule[<?php echo $i; ?>][activity]" value="<?php echo esc_attr($item['activity'] ?? ''); ?>" placeholder="Activity" class="regular-text">
-                            <input type="text" name="event_schedule[<?php echo $i; ?>][description]" value="<?php echo esc_attr($item['description'] ?? ''); ?>" placeholder="Description" class="regular-text">
-                            <button type="button" class="button roanoke-repeater-remove">&times;</button>
+
+                <div class="roanoke-schedule-blocks">
+
+                    <?php foreach ($schedule as $block_index => $block) : ?>
+
+                        <div class="roanoke-schedule-block">
+
+                            <div class="roanoke-schedule-block-header">
+                                <div style="flex:1;">
+                                    <label style="display:block;font-weight:600;margin-bottom:5px;">
+                                        Schedule Block Name
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="event_schedule[<?php echo esc_attr($block_index); ?>][name]"
+                                        value="<?php echo esc_attr($block['name'] ?? ''); ?>"
+                                        placeholder="e.g. Main Stage, Kids Zone, Food & Entertainment"
+                                        class="large-text"
+                                    >
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="button roanoke-schedule-block-remove"
+                                >
+                                    Remove Block
+                                </button>
+                            </div>
+
+                            <div
+                                class="roanoke-schedule-items"
+                                data-block-index="<?php echo esc_attr($block_index); ?>"
+                            >
+
+                                <?php
+                                $items = isset($block['items']) && is_array($block['items'])
+                                    ? $block['items']
+                                    : [];
+
+                                if (empty($items)) {
+                                    $items = [
+                                        [
+                                            'time'     => '',
+                                            'activity' => '',
+                                            'location' => '',
+                                        ],
+                                    ];
+                                }
+                                ?>
+
+                                <?php foreach ($items as $item_index => $item) : ?>
+
+                                    <div class="roanoke-schedule-item">
+
+                                        <div class="roanoke-schedule-item-fields">
+
+                                            <div>
+                                                <label>Time Range</label>
+                                                <input
+                                                    type="text"
+                                                    name="event_schedule[<?php echo esc_attr($block_index); ?>][items][<?php echo esc_attr($item_index); ?>][time]"
+                                                    value="<?php echo esc_attr($item['time'] ?? ''); ?>"
+                                                    placeholder="5:00 PM - 6:00 PM"
+                                                    class="regular-text"
+                                                >
+                                            </div>
+
+                                            <div>
+                                                <label>Activity / Entertainment</label>
+                                                <input
+                                                    type="text"
+                                                    name="event_schedule[<?php echo esc_attr($block_index); ?>][items][<?php echo esc_attr($item_index); ?>][activity]"
+                                                    value="<?php echo esc_attr($item['activity'] ?? ''); ?>"
+                                                    placeholder="Live Music"
+                                                    class="regular-text"
+                                                >
+                                            </div>
+
+                                            <div>
+                                                <label>Location</label>
+                                                <input
+                                                    type="text"
+                                                    name="event_schedule[<?php echo esc_attr($block_index); ?>][items][<?php echo esc_attr($item_index); ?>][location]"
+                                                    value="<?php echo esc_attr($item['location'] ?? ''); ?>"
+                                                    placeholder="Main Stage"
+                                                    class="regular-text"
+                                                >
+                                            </div>
+
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            class="button roanoke-schedule-item-remove"
+                                        >
+                                            Remove
+                                        </button>
+
+                                    </div>
+
+                                <?php endforeach; ?>
+
+                            </div>
+
+                            <button
+                                type="button"
+                                class="button roanoke-schedule-item-add"
+                            >
+                                + Add Timeline Item
+                            </button>
+
                         </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <button type="button" class="button roanoke-repeater-add">+ Add Schedule Item</button>
+
+                    <?php endforeach; ?>
+
                 </div>
+
+                <button
+                    type="button"
+                    class="button button-primary roanoke-schedule-block-add"
+                >
+                    + Add Schedule Block
+                </button>
+
             </div>
 
             <!-- BRING -->
@@ -839,12 +1108,40 @@ class Roanoke_Event_Meta_Box {
 
             <!-- PARTICIPATE -->
             <div class="roanoke-meta-section">
-                <h3>Participate</h3>
+                <h3>Participate - Call to Action Cards</h3>
+                <p class="description">Add cards for vendors, volunteers, sponsorships, or any other participation opportunities.</p>
+                
+                <div class="roanoke-repeater" data-field="participate">
+                    <div class="roanoke-repeater-items">
+                        <?php foreach ($participate as $i => $item) : ?>
+                        <div class="roanoke-repeater-item roanoke-repeater-item--participate">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;">
+                                <input type="text" name="event_participate[<?php echo $i; ?>][title]" value="<?php echo esc_attr($item['title'] ?? ''); ?>" placeholder="Card Title" class="regular-text" style="grid-column:1/3;">
+                                
+                                <textarea name="event_participate[<?php echo $i; ?>][description]" rows="2" placeholder="Card Description" class="large-text" style="grid-column:1/3;"><?php echo esc_textarea($item['description'] ?? ''); ?></textarea>
+                                
+                                <input type="text" name="event_participate[<?php echo $i; ?>][link_text]" value="<?php echo esc_attr($item['link_text'] ?? ''); ?>" placeholder="Button Text (e.g. Apply Now)" class="regular-text">
+                                
+                                <input type="url" name="event_participate[<?php echo $i; ?>][link_url]" value="<?php echo esc_url($item['link_url'] ?? ''); ?>" placeholder="Button URL" class="regular-text">
+                                
+                                <select name="event_participate[<?php echo $i; ?>][color_scheme]" style="grid-column:1/3;width:100%;">
+                                    <?php foreach ($color_schemes as $key => $label) : ?>
+                                        <option value="<?php echo esc_attr($key); ?>" <?php selected($item['color_scheme'] ?? 'primary', $key); ?>><?php echo esc_html($label); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <button type="button" class="button roanoke-repeater-remove">&times;</button>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <button type="button" class="button roanoke-repeater-add">+ Add Participation Card</button>
+                </div>
+            </div>
+
+            <!-- SPONSORS -->
+            <div class="roanoke-meta-section">
+                <h3>Sponsors</h3>
                 <table class="form-table">
-                    <tr><th>Vendor Description</th><td><textarea name="event_vendors_text" rows="2" class="large-text"><?php echo esc_textarea($this->get($post->ID, 'vendors_text')); ?></textarea></td></tr>
-                    <tr><th>Vendor Link</th><td><input type="url" name="event_vendor_link" value="<?php echo esc_url($this->get($post->ID, 'vendor_link')); ?>" class="regular-text"></td></tr>
-                    
-                    <!-- SPONSORS REPEATER -->
                     <tr>
                         <th>Sponsors</th>
                         <td>
@@ -860,8 +1157,42 @@ class Roanoke_Event_Meta_Box {
                                             <button type="button" class="button roanoke-repeater-media-upload">Select Logo</button>
                                             <button type="button" class="button roanoke-repeater-media-remove" <?php echo empty($item['image_id']) ? 'style="display:none;"' : ''; ?>>Remove</button>
                                         </div>
+                                        
                                         <input type="text" name="event_sponsors[<?php echo $i; ?>][name]" value="<?php echo esc_attr($item['name'] ?? ''); ?>" placeholder="Sponsor Name" class="regular-text">
-                                        <input type="url" name="event_sponsors[<?php echo $i; ?>][link]" value="<?php echo esc_attr($item['link'] ?? ''); ?>" placeholder="https://..." class="regular-text">
+                                        <input type="url" name="event_sponsors[<?php echo $i; ?>][link]" value="<?php echo esc_attr($item['link'] ?? ''); ?>" placeholder="Website URL" class="regular-text">
+                                        
+                                        <!-- Business Bio -->
+                                        <div class="sponsor-bio-row">
+                                            <textarea name="event_sponsors[<?php echo $i; ?>][bio]" rows="2" class="large-text" placeholder="Business bio / description"><?php echo esc_textarea($item['bio'] ?? ''); ?></textarea>
+                                        </div>
+                                        
+                                        <!-- Social Media Links -->
+                                        <div class="sponsor-social-row">
+                                            <div style="flex:1;min-width:150px;">
+                                                <label class="sponsor-social-label">Facebook</label>
+                                                <input type="url" name="event_sponsors[<?php echo $i; ?>][facebook]" value="<?php echo esc_attr($item['facebook'] ?? ''); ?>" placeholder="https://facebook.com/..." class="regular-text">
+                                            </div>
+                                            <div style="flex:1;min-width:150px;">
+                                                <label class="sponsor-social-label">Instagram</label>
+                                                <input type="url" name="event_sponsors[<?php echo $i; ?>][instagram]" value="<?php echo esc_attr($item['instagram'] ?? ''); ?>" placeholder="https://instagram.com/..." class="regular-text">
+                                            </div>
+                                            <div style="flex:1;min-width:150px;">
+                                                <label class="sponsor-social-label">TikTok</label>
+                                                <input type="url" name="event_sponsors[<?php echo $i; ?>][tiktok]" value="<?php echo esc_attr($item['tiktok'] ?? ''); ?>" placeholder="https://tiktok.com/@..." class="regular-text">
+                                            </div>
+                                        </div>
+                                        <div class="sponsor-social-row">
+                                            <div style="flex:1;min-width:150px;">
+                                                <label class="sponsor-social-label">X (Twitter)</label>
+                                                <input type="url" name="event_sponsors[<?php echo $i; ?>][twitter]" value="<?php echo esc_attr($item['twitter'] ?? ''); ?>" placeholder="https://x.com/..." class="regular-text">
+                                            </div>
+                                            <div style="flex:1;min-width:150px;">
+                                                <label class="sponsor-social-label">YouTube</label>
+                                                <input type="url" name="event_sponsors[<?php echo $i; ?>][youtube]" value="<?php echo esc_attr($item['youtube'] ?? ''); ?>" placeholder="https://youtube.com/..." class="regular-text">
+                                            </div>
+                                            <div style="flex:1;min-width:150px;"></div>
+                                        </div>
+                                        
                                         <button type="button" class="button roanoke-repeater-remove">&times;</button>
                                     </div>
                                     <?php endforeach; ?>
@@ -870,8 +1201,6 @@ class Roanoke_Event_Meta_Box {
                             </div>
                         </td>
                     </tr>
-                    
-                    <tr><th>Volunteer Link</th><td><input type="url" name="event_volunteer_link" value="<?php echo esc_url($this->get($post->ID, 'volunteer_link')); ?>" class="regular-text"></td></tr>
                 </table>
             </div>
 
@@ -1008,7 +1337,7 @@ class Roanoke_Event_Meta_Box {
                 $(this).hide();
             });
 
-            // Repeater add (schedule, bring, leave, faq, sponsors)
+            // Repeater add (schedule, bring, leave, faq, sponsors, participate)
             $(document).on('click', '.roanoke-repeater-add', function() {
                 var container = $(this).closest('.roanoke-repeater');
                 var field = container.data('field');
@@ -1021,12 +1350,6 @@ class Roanoke_Event_Meta_Box {
                            '<input type="text" name="event_faq[' + index + '][question]" placeholder="Question" class="regular-text" style="margin-bottom:6px;">' +
                            '<textarea name="event_faq[' + index + '][answer]" rows="2" class="large-text" placeholder="Answer"></textarea>' +
                            '<button type="button" class="button roanoke-repeater-remove">&times;</button></div>';
-                } else if (field === 'schedule') {
-                    html = '<div class="roanoke-repeater-item">' +
-                           '<input type="text" name="event_schedule[' + index + '][time]" placeholder="5:00 PM" class="small-text">' +
-                           '<input type="text" name="event_schedule[' + index + '][activity]" placeholder="Activity" class="regular-text">' +
-                           '<input type="text" name="event_schedule[' + index + '][description]" placeholder="Description" class="regular-text">' +
-                           '<button type="button" class="button roanoke-repeater-remove">&times;</button></div>';
                 } else if (field === 'sponsors') {
                     html = '<div class="roanoke-repeater-item roanoke-repeater-item--sponsor">' +
                            '<div class="roanoke-media-field">' +
@@ -1036,7 +1359,38 @@ class Roanoke_Event_Meta_Box {
                            '<button type="button" class="button roanoke-repeater-media-remove" style="display:none;">Remove</button>' +
                            '</div>' +
                            '<input type="text" name="event_sponsors[' + index + '][name]" placeholder="Sponsor Name" class="regular-text">' +
-                           '<input type="url" name="event_sponsors[' + index + '][link]" placeholder="https://..." class="regular-text">' +
+                           '<input type="url" name="event_sponsors[' + index + '][link]" placeholder="Website URL" class="regular-text">' +
+                           '<div class="sponsor-bio-row">' +
+                           '<textarea name="event_sponsors[' + index + '][bio]" rows="2" class="large-text" placeholder="Business bio / description"></textarea>' +
+                           '</div>' +
+                           '<div class="sponsor-social-row">' +
+                           '<div style="flex:1;min-width:150px;"><label class="sponsor-social-label">Facebook</label><input type="url" name="event_sponsors[' + index + '][facebook]" placeholder="https://facebook.com/..." class="regular-text"></div>' +
+                           '<div style="flex:1;min-width:150px;"><label class="sponsor-social-label">Instagram</label><input type="url" name="event_sponsors[' + index + '][instagram]" placeholder="https://instagram.com/..." class="regular-text"></div>' +
+                           '<div style="flex:1;min-width:150px;"><label class="sponsor-social-label">TikTok</label><input type="url" name="event_sponsors[' + index + '][tiktok]" placeholder="https://tiktok.com/@..." class="regular-text"></div>' +
+                           '</div>' +
+                           '<div class="sponsor-social-row">' +
+                           '<div style="flex:1;min-width:150px;"><label class="sponsor-social-label">X (Twitter)</label><input type="url" name="event_sponsors[' + index + '][twitter]" placeholder="https://x.com/..." class="regular-text"></div>' +
+                           '<div style="flex:1;min-width:150px;"><label class="sponsor-social-label">YouTube</label><input type="url" name="event_sponsors[' + index + '][youtube]" placeholder="https://youtube.com/..." class="regular-text"></div>' +
+                           '<div style="flex:1;min-width:150px;"></div>' +
+                           '</div>' +
+                           '<button type="button" class="button roanoke-repeater-remove">&times;</button></div>';
+                } else if (field === 'participate') {
+                    html = '<div class="roanoke-repeater-item roanoke-repeater-item--participate">' +
+                           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;">' +
+                           '<input type="text" name="event_participate[' + index + '][title]" placeholder="Card Title" class="regular-text" style="grid-column:1/3;">' +
+                           '<textarea name="event_participate[' + index + '][description]" rows="2" placeholder="Card Description" class="large-text" style="grid-column:1/3;"></textarea>' +
+                           '<input type="text" name="event_participate[' + index + '][link_text]" placeholder="Button Text (e.g. Apply Now)" class="regular-text">' +
+                           '<input type="url" name="event_participate[' + index + '][link_url]" placeholder="Button URL" class="regular-text">' +
+                           '<select name="event_participate[' + index + '][color_scheme]" style="grid-column:1/3;width:100%;">' +
+                           '<option value="primary">Primary (Event Primary Color)</option>' +
+                           '<option value="secondary">Secondary (Event Secondary Color)</option>' +
+                           '<option value="accent">Accent (Event Accent Color)</option>' +
+                           '<option value="background">Background (Event Background Color)</option>' +
+                           '<option value="dark_text">Dark Text (Event Dark Text Color)</option>' +
+                           '<option value="optional_accent">Optional Accent (Event Optional Accent Color)</option>' +
+                           '<option value="white">White</option>' +
+                           '</select>' +
+                           '</div>' +
                            '<button type="button" class="button roanoke-repeater-remove">&times;</button></div>';
                 } else {
                     html = '<div class="roanoke-repeater-item">' +
@@ -1085,6 +1439,210 @@ class Roanoke_Event_Meta_Box {
                 button.hide();
             });
 
+            /**
+             * ----------------------------------------------------
+             * EVENT SCHEDULE BLOCKS
+             * ----------------------------------------------------
+             *
+             * Structure:
+             *
+             * Schedule Block
+             *   - Block Name
+             *   - Timeline Item
+             *       - Time Range
+             *       - Activity / Entertainment
+             *       - Location
+             *   - Timeline Item
+             *   - ...
+             *
+             * Schedule Block
+             *   - Block Name
+             *   - Timeline Item
+             *   - ...
+             */
+
+            // Add Schedule Block
+            $(document).on('click', '.roanoke-schedule-block-add', function(e) {
+                e.preventDefault();
+
+                var blocksContainer = $('.roanoke-schedule-blocks');
+
+                // Use timestamp to avoid duplicate indexes after removing blocks.
+                var blockIndex = Date.now();
+
+                var html =
+                    '<div class="roanoke-schedule-block">' +
+
+                        '<div class="roanoke-schedule-block-header">' +
+
+                            '<div style="flex:1;">' +
+                                '<label style="display:block;font-weight:600;margin-bottom:5px;">' +
+                                    'Schedule Block Name' +
+                                '</label>' +
+
+                                '<input type="text" ' +
+                                    'name="event_schedule[' + blockIndex + '][name]" ' +
+                                    'placeholder="e.g. Main Stage, Kids Zone, Food & Entertainment" ' +
+                                    'class="large-text">' +
+                            '</div>' +
+
+                            '<button type="button" class="button roanoke-schedule-block-remove">' +
+                                'Remove Block' +
+                            '</button>' +
+
+                        '</div>' +
+
+                        '<div class="roanoke-schedule-items" ' +
+                            'data-block-index="' + blockIndex + '">' +
+
+                            createRoanokeScheduleItem(blockIndex, Date.now() + 1) +
+
+                        '</div>' +
+
+                        '<button type="button" class="button roanoke-schedule-item-add">' +
+                            '+ Add Timeline Item' +
+                        '</button>' +
+
+                    '</div>';
+
+                blocksContainer.append(html);
+            });
+
+
+            // Add Timeline Item
+            $(document).on('click', '.roanoke-schedule-item-add', function(e) {
+                e.preventDefault();
+
+                var button = $(this);
+                var block = button.closest('.roanoke-schedule-block');
+                var itemsContainer = block.find('.roanoke-schedule-items');
+                var blockIndex = itemsContainer.data('block-index');
+
+                // Use timestamp to avoid duplicate indexes after removing items.
+                var itemIndex = Date.now();
+
+                itemsContainer.append(
+                    createRoanokeScheduleItem(blockIndex, itemIndex)
+                );
+            });
+
+
+            // Remove Timeline Item
+            $(document).on('click', '.roanoke-schedule-item-remove', function(e) {
+                e.preventDefault();
+
+                var item = $(this).closest('.roanoke-schedule-item');
+                var itemsContainer = item.closest('.roanoke-schedule-items');
+
+                item.remove();
+
+                // Always keep at least one timeline item in a block.
+                if (itemsContainer.children('.roanoke-schedule-item').length === 0) {
+                    var blockIndex = itemsContainer.data('block-index');
+
+                    itemsContainer.append(
+                        createRoanokeScheduleItem(blockIndex, Date.now())
+                    );
+                }
+            });
+
+
+            // Remove Schedule Block
+            $(document).on('click', '.roanoke-schedule-block-remove', function(e) {
+                e.preventDefault();
+
+                var block = $(this).closest('.roanoke-schedule-block');
+
+                block.remove();
+
+                // Always keep at least one schedule block.
+                if ($('.roanoke-schedule-blocks .roanoke-schedule-block').length === 0) {
+
+                    var blocksContainer = $('.roanoke-schedule-blocks');
+                    var blockIndex = Date.now();
+
+                    var html =
+                        '<div class="roanoke-schedule-block">' +
+
+                            '<div class="roanoke-schedule-block-header">' +
+
+                                '<div style="flex:1;">' +
+                                    '<label style="display:block;font-weight:600;margin-bottom:5px;">' +
+                                        'Schedule Block Name' +
+                                    '</label>' +
+
+                                    '<input type="text" ' +
+                                        'name="event_schedule[' + blockIndex + '][name]" ' +
+                                        'placeholder="e.g. Main Stage, Kids Zone, Food & Entertainment" ' +
+                                        'class="large-text">' +
+                                '</div>' +
+
+                                '<button type="button" class="button roanoke-schedule-block-remove">' +
+                                    'Remove Block' +
+                                '</button>' +
+
+                            '</div>' +
+
+                            '<div class="roanoke-schedule-items" ' +
+                                'data-block-index="' + blockIndex + '">' +
+
+                                createRoanokeScheduleItem(blockIndex, Date.now() + 1) +
+
+                            '</div>' +
+
+                            '<button type="button" class="button roanoke-schedule-item-add">' +
+                                '+ Add Timeline Item' +
+                            '</button>' +
+
+                        '</div>';
+
+                    blocksContainer.append(html);
+                }
+            });
+
+
+            // Create Timeline Item HTML
+            function createRoanokeScheduleItem(blockIndex, itemIndex) {
+
+                return (
+                    '<div class="roanoke-schedule-item">' +
+
+                        '<div class="roanoke-schedule-item-fields">' +
+
+                            '<div>' +
+                                '<label>Time Range</label>' +
+                                '<input type="text" ' +
+                                    'name="event_schedule[' + blockIndex + '][items][' + itemIndex + '][time]" ' +
+                                    'placeholder="5:00 PM - 6:00 PM" ' +
+                                    'class="regular-text">' +
+                            '</div>' +
+
+                            '<div>' +
+                                '<label>Activity / Entertainment</label>' +
+                                '<input type="text" ' +
+                                    'name="event_schedule[' + blockIndex + '][items][' + itemIndex + '][activity]" ' +
+                                    'placeholder="Live Music" ' +
+                                    'class="regular-text">' +
+                            '</div>' +
+
+                            '<div>' +
+                                '<label>Location</label>' +
+                                '<input type="text" ' +
+                                    'name="event_schedule[' + blockIndex + '][items][' + itemIndex + '][location]" ' +
+                                    'placeholder="Main Stage" ' +
+                                    'class="regular-text">' +
+                            '</div>' +
+
+                        '</div>' +
+
+                        '<button type="button" class="button roanoke-schedule-item-remove">' +
+                            'Remove' +
+                        '</button>' +
+
+                    '</div>'
+                );
+            }
+
         })(jQuery);
         </script>
         <?php
@@ -1112,12 +1670,11 @@ class Roanoke_Event_Meta_Box {
 
         // Plain text fields (no HTML allowed)
         $text_fields = [
-            'color_scheme', 'color_primary', 'color_secondary', 'color_accent', 'color_dark', 'color_light',
+            'color_scheme', 'color_primary', 'color_secondary', 'color_accent', 'color_background', 'color_dark_text', 'color_optional_accent',
             'logo_id', 'tagline',
             'hero_image_id', 'hero_video', 'short_desc',
             'date', 'time', 'end_time', 'location', 'address', 'cost', 'countdown',
             'map_image_id',
-            'vendors_text', 'vendor_link', 'volunteer_link',
             'gallery_ids', 'awards', 'merch_text', 'merch_link',
             'cta_text', 'cta_link', 'cta_secondary_text', 'cta_secondary_link',
         ];
@@ -1166,20 +1723,99 @@ class Roanoke_Event_Meta_Box {
         }
 
         // Repeater fields
-        $arrays = ['schedule', 'bring', 'leave', 'faq', 'sponsors'];
+        $arrays = ['bring', 'leave', 'faq', 'sponsors', 'participate'];
+
         foreach ( $arrays as $arr ) {
             $key = $this->prefix . $arr;
+
             if ( isset( $_POST['event_' . $arr] ) && is_array( $_POST['event_' . $arr] ) ) {
                 $clean = [];
+
                 foreach ( wp_unslash( $_POST['event_' . $arr] ) as $item ) {
                     if ( is_array( $item ) ) {
                         $clean[] = array_map( 'sanitize_text_field', $item );
                     }
                 }
+
                 update_post_meta( $post_id, $key, $clean );
             } else {
                 delete_post_meta( $post_id, $key );
             }
+        }
+
+
+        /**
+         * ----------------------------------------------------
+         * EVENT SCHEDULE
+         * ----------------------------------------------------
+         *
+         * Nested structure:
+         *
+         * [
+         *     [
+         *         'name' => 'Main Stage',
+         *         'items' => [
+         *             [
+         *                 'time' => '5:00 PM - 6:00 PM',
+         *                 'activity' => 'Live Music',
+         *                 'location' => 'Main Stage',
+         *             ],
+         *         ],
+         *     ],
+         * ]
+         */
+        $schedule_key = $this->prefix . 'schedule';
+
+        if (
+            isset( $_POST['event_schedule'] ) &&
+            is_array( $_POST['event_schedule'] )
+        ) {
+
+            $clean_schedule = [];
+
+            foreach ( wp_unslash( $_POST['event_schedule'] ) as $block ) {
+
+                if ( ! is_array( $block ) ) {
+                    continue;
+                }
+
+                $clean_block = [
+                    'name'  => sanitize_text_field( $block['name'] ?? '' ),
+                    'items' => [],
+                ];
+
+                if (
+                    isset( $block['items'] ) &&
+                    is_array( $block['items'] )
+                ) {
+
+                    foreach ( $block['items'] as $item ) {
+
+                        if ( ! is_array( $item ) ) {
+                            continue;
+                        }
+
+                        $clean_block['items'][] = [
+                            'time'     => sanitize_text_field( $item['time'] ?? '' ),
+                            'activity' => sanitize_text_field( $item['activity'] ?? '' ),
+                            'location' => sanitize_text_field( $item['location'] ?? '' ),
+                        ];
+                    }
+                }
+
+                /*
+                * Keep the block even if it currently has no timeline items.
+                * This allows the admin to create the block first and populate
+                * the timeline later.
+                */
+                $clean_schedule[] = $clean_block;
+            }
+
+            update_post_meta( $post_id, $schedule_key, $clean_schedule );
+
+        } else {
+
+            delete_post_meta( $post_id, $schedule_key );
         }
     }
 }
@@ -1244,167 +1880,12 @@ add_action( 'add_meta_boxes', function( $post_type, $post ) {
 
 function render_interior_page_meta_box( $post ) {
     wp_nonce_field( 'interior_page_nonce', 'interior_page_nonce' );
-
-    // Hero settings
-    $hero_tagline = get_post_meta( $post->ID, 'page_hero_tagline', true );
-
-    // Filter bar
-    $show_filters = get_post_meta( $post->ID, 'page_show_filters', true );
-    $filters      = get_post_meta( $post->ID, 'page_filters', true );
-
-    // Intro block
-    $intro_text = get_post_meta( $post->ID, 'page_intro_text', true );
-    $stat_1     = get_post_meta( $post->ID, 'page_stat_1', true );
-    $stat_2     = get_post_meta( $post->ID, 'page_stat_2', true );
-    $stat_3     = get_post_meta( $post->ID, 'page_stat_3', true );
-
-    // Callout
-    $callout = get_post_meta( $post->ID, 'page_callout', true );
-
-    // FAQ
-    $faq = get_post_meta( $post->ID, 'page_faq', true );
-
-    // Marquee
-    $marquee_text = get_post_meta( $post->ID, 'page_marquee_text', true );
-
-    // Bottom CTA
-    $cta_heading   = get_post_meta( $post->ID, 'page_cta_heading', true );
-    $cta_text      = get_post_meta( $post->ID, 'page_cta_text', true );
-    $cta_btn_1     = get_post_meta( $post->ID, 'page_cta_btn_1_text', true );
-    $cta_btn_1_url = get_post_meta( $post->ID, 'page_cta_btn_1_url', true );
-    $cta_btn_2     = get_post_meta( $post->ID, 'page_cta_btn_2_text', true );
-    $cta_btn_2_url = get_post_meta( $post->ID, 'page_cta_btn_2_url', true );
-
+    $subtitle = get_post_meta( $post->ID, 'page_subtitle', true );
     ?>
-    <style>
-        .vr-meta-section { background:#f0f6fc; padding:15px; border-radius:4px; margin-bottom:16px; border-left:4px solid #2271b1; }
-        .vr-meta-section h4 { margin:0 0 12px 0; font-size:14px; color:#1d2327; }
-        .vr-meta-field { margin-bottom:14px; }
-        .vr-meta-field label { display:block; font-weight:600; margin-bottom:4px; font-size:13px; }
-        .vr-meta-field input[type="text"],
-        .vr-meta-field input[type="url"],
-        .vr-meta-field textarea { width:100%; max-width:600px; padding:6px 8px; }
-        .vr-meta-field textarea { min-height:80px; font-family:monospace; font-size:12px; }
-        .vr-meta-field .description { color:#666; font-size:12px; margin-top:3px; font-style:italic; }
-        .vr-meta-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-        @media(max-width:782px){ .vr-meta-row { grid-template-columns:1fr; } }
-        .vr-meta-field input[type="checkbox"] { margin-right:6px; }
-    </style>
-
-    <!-- HERO -->
-    <div class="vr-meta-section">
-        <h4>&#127968; Hero Settings</h4>
-        <div class="vr-meta-field">
-            <label for="page_hero_tagline">Hero Tagline (badge above title)</label>
-            <input type="text" id="page_hero_tagline" name="page_hero_tagline" value="<?php echo esc_attr( $hero_tagline ); ?>" placeholder="e.g. Explore Roanoke">
-            <p class="description">Leave empty to use "Explore Roanoke"</p>
-        </div>
-    </div>
-
-    <!-- FILTER BAR -->
-    <div class="vr-meta-section">
-        <h4>&#128269; Filter Bar (Optional)</h4>
-        <div class="vr-meta-field">
-            <label>
-                <input type="checkbox" name="page_show_filters" value="1" <?php checked( $show_filters, '1' ); ?>>
-                Show filter pills below hero
-            </label>
-        </div>
-        <div class="vr-meta-field">
-            <label for="page_filters">Filter Categories (comma-separated)</label>
-            <input type="text" id="page_filters" name="page_filters" value="<?php echo esc_attr( $filters ); ?>" placeholder="e.g. Outdoor, Dining, Shopping, Arts & Culture">
-            <p class="description">Example: Outdoor, Dining, Shopping, Family Fun</p>
-        </div>
-    </div>
-
-    <!-- INTRO BLOCK -->
-    <div class="vr-meta-section">
-        <h4>&#128196; Intro Block</h4>
-        <div class="vr-meta-field">
-            <label for="page_intro_text">Intro Paragraph</label>
-            <textarea id="page_intro_text" name="page_intro_text" rows="4"><?php echo esc_textarea( $intro_text ); ?></textarea>
-            <p class="description">Shown in the colored intro box below the hero. Supports basic HTML.</p>
-        </div>
-        <div class="vr-meta-row">
-            <div class="vr-meta-field">
-                <label for="page_stat_1">Stat 1</label>
-                <input type="text" id="page_stat_1" name="page_stat_1" value="<?php echo esc_attr( $stat_1 ); ?>" placeholder="e.g. 40+ Restaurants">
-            </div>
-            <div class="vr-meta-field">
-                <label for="page_stat_2">Stat 2</label>
-                <input type="text" id="page_stat_2" name="page_stat_2" value="<?php echo esc_attr( $stat_2 ); ?>" placeholder="e.g. 12 Miles of Trails">
-            </div>
-        </div>
-        <div class="vr-meta-field">
-            <label for="page_stat_3">Stat 3</label>
-            <input type="text" id="page_stat_3" name="page_stat_3" value="<?php echo esc_attr( $stat_3 ); ?>" placeholder="e.g. Year-Round Events">
-        </div>
-    </div>
-
-    <!-- CALLOUT -->
-    <div class="vr-meta-section">
-        <h4>&#128227; Callout Box</h4>
-        <div class="vr-meta-field">
-            <label for="page_callout">Callout Content</label>
-            <textarea id="page_callout" name="page_callout" rows="3"><?php echo esc_textarea( $callout ); ?></textarea>
-            <p class="description">Highlighted box with orange left border. Leave empty to hide.</p>
-        </div>
-    </div>
-
-    <!-- FAQ -->
-    <div class="vr-meta-section">
-        <h4>&#10067; FAQ Accordion</h4>
-        <div class="vr-meta-field">
-            <label for="page_faq">FAQ Items</label>
-            <textarea id="page_faq" name="page_faq" rows="6"><?php echo esc_textarea( $faq ); ?></textarea>
-            <p class="description">Format: Question on first line, answer on next lines. Separate items with a blank line.<br>Example:<br>What are your hours?<br>We are open Monday-Friday 8am-5pm.<br><br>Where do I park?<br>Free parking is available downtown.</p>
-        </div>
-    </div>
-
-    <!-- MARQUEE -->
-    <div class="vr-meta-section">
-        <h4>&#128172; Marquee Banner Text</h4>
-        <div class="vr-meta-field">
-            <label for="page_marquee_text">Marquee Text (use &#9733; for star separators)</label>
-            <input type="text" id="page_marquee_text" name="page_marquee_text" value="<?php echo esc_attr( $marquee_text ); ?>" placeholder="Visit Roanoke &#9733; Unique Dining Capital &#9733; Small Town Charm">
-            <p class="description">Leave empty for default brand messaging.</p>
-        </div>
-    </div>
-
-    <!-- BOTTOM CTA -->
-    <div class="vr-meta-section">
-        <h4>&#127919; Bottom CTA Strip</h4>
-        <div class="vr-meta-row">
-            <div class="vr-meta-field">
-                <label for="page_cta_heading">CTA Heading</label>
-                <input type="text" id="page_cta_heading" name="page_cta_heading" value="<?php echo esc_attr( $cta_heading ); ?>" placeholder="Ready to Explore Roanoke?">
-            </div>
-            <div class="vr-meta-field">
-                <label for="page_cta_text">CTA Description</label>
-                <input type="text" id="page_cta_text" name="page_cta_text" value="<?php echo esc_attr( $cta_text ); ?>" placeholder="Short description text">
-            </div>
-        </div>
-        <div class="vr-meta-row">
-            <div class="vr-meta-field">
-                <label for="page_cta_btn_1_text">Primary Button Text</label>
-                <input type="text" id="page_cta_btn_1_text" name="page_cta_btn_1_text" value="<?php echo esc_attr( $cta_btn_1 ); ?>" placeholder="Plan Your Visit">
-            </div>
-            <div class="vr-meta-field">
-                <label for="page_cta_btn_1_url">Primary Button URL</label>
-                <input type="url" id="page_cta_btn_1_url" name="page_cta_btn_1_url" value="<?php echo esc_attr( $cta_btn_1_url ); ?>" placeholder="/plan-your-visit">
-            </div>
-        </div>
-        <div class="vr-meta-row">
-            <div class="vr-meta-field">
-                <label for="page_cta_btn_2_text">Secondary Button Text</label>
-                <input type="text" id="page_cta_btn_2_text" name="page_cta_btn_2_text" value="<?php echo esc_attr( $cta_btn_2 ); ?>" placeholder="Contact Us">
-            </div>
-            <div class="vr-meta-field">
-                <label for="page_cta_btn_2_url">Secondary Button URL</label>
-                <input type="url" id="page_cta_btn_2_url" name="page_cta_btn_2_url" value="<?php echo esc_attr( $cta_btn_2_url ); ?>" placeholder="/contact">
-            </div>
-        </div>
-    </div>
+    <p>
+        <label for="page_subtitle"><?php _e( 'Subtitle (displayed below the page title in hero):', 'visit-roanoke' ); ?></label>
+        <input type="text" id="page_subtitle" name="page_subtitle" value="<?php echo esc_attr( $subtitle ); ?>" style="width:100%;max-width:500px;" placeholder="e.g. Discover the best of Roanoke">
+    </p>
     <?php
 }
 
@@ -1426,21 +1907,7 @@ add_action( 'save_post', function( $post_id ) {
     }
 
     $text_fields = array(
-        'page_hero_tagline',
-        'page_filters',
-        'page_intro_text',
-        'page_stat_1',
-        'page_stat_2',
-        'page_stat_3',
-        'page_callout',
-        'page_faq',
-        'page_marquee_text',
-        'page_cta_heading',
-        'page_cta_text',
-        'page_cta_btn_1_text',
-        'page_cta_btn_1_url',
-        'page_cta_btn_2_text',
-        'page_cta_btn_2_url',
+        'page_subtitle',
     );
 
     foreach ( $text_fields as $field ) {
@@ -1521,3 +1988,777 @@ function newsletter_customizer_settings( $wp_customize ) {
     ));
 }
 add_action( 'customize_register', 'newsletter_customizer_settings' );
+
+/**
+ * Register Event Custom Post Type
+ */
+function visit_roanoke_register_event_post_type() {
+    
+    $labels = array(
+        'name'                  => _x( 'Events', 'Post type general name', 'visit-roanoke' ),
+        'singular_name'         => _x( 'Event', 'Post type singular name', 'visit-roanoke' ),
+        'menu_name'             => _x( 'Events', 'Admin Menu text', 'visit-roanoke' ),
+        'name_admin_bar'        => _x( 'Event', 'Add New on Toolbar', 'visit-roanoke' ),
+        'add_new'               => __( 'Add New Event', 'visit-roanoke' ),
+        'add_new_item'          => __( 'Add New Event', 'visit-roanoke' ),
+        'new_item'              => __( 'New Event', 'visit-roanoke' ),
+        'edit_item'             => __( 'Edit Event', 'visit-roanoke' ),
+        'view_item'             => __( 'View Event', 'visit-roanoke' ),
+        'all_items'             => __( 'All Events', 'visit-roanoke' ),
+        'search_items'          => __( 'Search Events', 'visit-roanoke' ),
+        'parent_item_colon'     => __( 'Parent Events:', 'visit-roanoke' ),
+        'not_found'             => __( 'No events found.', 'visit-roanoke' ),
+        'not_found_in_trash'    => __( 'No events found in Trash.', 'visit-roanoke' ),
+        'featured_image'        => _x( 'Event Image', 'Overrides the "Featured Image" phrase', 'visit-roanoke' ),
+        'set_featured_image'    => _x( 'Set event image', 'Overrides the "Set featured image" phrase', 'visit-roanoke' ),
+        'remove_featured_image' => _x( 'Remove event image', 'Overrides the "Remove featured image" phrase', 'visit-roanoke' ),
+        'use_featured_image'    => _x( 'Use as event image', 'Overrides the "Use as featured image" phrase', 'visit-roanoke' ),
+        'archives'              => _x( 'Event Archives', 'The post type archive label used in nav menus', 'visit-roanoke' ),
+        'insert_into_item'      => _x( 'Insert into event', 'Overrides the "Insert into post" phrase', 'visit-roanoke' ),
+        'uploaded_to_this_item' => _x( 'Uploaded to this event', 'Overrides the "Uploaded to this post" phrase', 'visit-roanoke' ),
+        'filter_items_list'     => _x( 'Filter events list', 'Screen reader text for the filter links heading on the post type listing screen', 'visit-roanoke' ),
+        'items_list_navigation' => _x( 'Events list navigation', 'Screen reader text for the pagination heading on the post type listing screen', 'visit-roanoke' ),
+        'items_list'            => _x( 'Events list', 'Screen reader text for the items list heading on the post type listing screen', 'visit-roanoke' ),
+    );
+
+    $args = array(
+        'labels'             => $labels,
+        'public'             => true,
+        'publicly_queryable' => true,
+        'show_ui'            => true,
+        'show_in_menu'       => true,
+        'query_var'          => true,
+        'rewrite'            => array( 'slug' => 'events' ),
+        'capability_type'    => 'post',
+        'has_archive'        => true,
+        'hierarchical'       => false,
+        'menu_position'      => 5,
+        'menu_icon'          => 'dashicons-calendar-alt',
+        'supports'           => array( 'title', 'editor', 'thumbnail', 'excerpt', 'custom-fields' ),
+        'show_in_rest'       => true, // Enable Gutenberg
+    );
+
+    register_post_type( 'event', $args );
+
+    // Register Event Category Taxonomy
+    $tax_labels = array(
+        'name'              => _x( 'Event Categories', 'taxonomy general name', 'visit-roanoke' ),
+        'singular_name'     => _x( 'Event Category', 'taxonomy singular name', 'visit-roanoke' ),
+        'search_items'      => __( 'Search Event Categories', 'visit-roanoke' ),
+        'all_items'         => __( 'All Event Categories', 'visit-roanoke' ),
+        'parent_item'       => __( 'Parent Event Category', 'visit-roanoke' ),
+        'parent_item_colon' => __( 'Parent Event Category:', 'visit-roanoke' ),
+        'edit_item'         => __( 'Edit Event Category', 'visit-roanoke' ),
+        'update_item'       => __( 'Update Event Category', 'visit-roanoke' ),
+        'add_new_item'      => __( 'Add New Event Category', 'visit-roanoke' ),
+        'new_item_name'     => __( 'New Event Category Name', 'visit-roanoke' ),
+        'menu_name'         => __( 'Event Categories', 'visit-roanoke' ),
+    );
+
+    $tax_args = array(
+        'hierarchical'      => true,
+        'labels'            => $tax_labels,
+        'show_ui'           => true,
+        'show_admin_column' => true,
+        'query_var'         => true,
+        'rewrite'           => array( 'slug' => 'event-category' ),
+        'show_in_rest'      => true, // Enable Gutenberg
+    );
+
+    register_taxonomy( 'event_category', array( 'event' ), $tax_args );
+}
+add_action( 'init', 'visit_roanoke_register_event_post_type' );
+
+/**
+ * Add Event Details Meta Box
+ */
+function visit_roanoke_event_meta_box() {
+    add_meta_box(
+        'event_details_meta',
+        __( 'Event Details', 'visit-roanoke' ),
+        'visit_roanoke_event_meta_box_callback',
+        'event',
+        'normal',
+        'high'
+    );
+}
+add_action( 'add_meta_boxes', 'visit_roanoke_event_meta_box' );
+
+function visit_roanoke_event_meta_box_callback( $post ) {
+    wp_nonce_field( 'event_details_nonce', 'event_details_nonce' );
+
+    $event_date = get_post_meta( $post->ID, '_event_date', true );
+    $event_time = get_post_meta( $post->ID, '_event_time', true );
+    $event_short_desc = get_post_meta( $post->ID, '_event_short_desc', true );
+    $event_page_id = get_post_meta( $post->ID, '_event_page_id', true );
+    $featured = get_post_meta( $post->ID, '_event_featured', true );
+    
+    // Get all pages for dropdown
+    $pages = get_pages( array(
+        'sort_order'   => 'ASC',
+        'sort_column'  => 'post_title',
+        'post_type'    => 'page',
+        'post_status'  => 'publish',
+        'number'       => 0, // Get all pages
+    ) );
+    ?>
+    <style>
+        .event-meta-field { margin-bottom: 15px; }
+        .event-meta-field label { display: block; font-weight: 600; margin-bottom: 4px; }
+        .event-meta-field input[type="text"],
+        .event-meta-field input[type="date"],
+        .event-meta-field select,
+        .event-meta-field textarea { width: 100%; max-width: 500px; padding: 6px 8px; }
+        .event-meta-field textarea { min-height: 80px; }
+        .event-meta-field .description { color: #666; font-size: 12px; margin-top: 3px; }
+        .event-meta-field select { max-width: 500px; }
+        .event-meta-field select option { padding: 4px; }
+        .event-meta-field select optgroup { font-weight: 700; }
+    </style>
+
+    <div class="event-meta-field">
+        <label for="event_date"><?php _e( 'Event Date', 'visit-roanoke' ); ?></label>
+        <input type="date" id="event_date" name="event_date" value="<?php echo esc_attr( $event_date ); ?>">
+        <p class="description"><?php _e( 'Select the date of the event.', 'visit-roanoke' ); ?></p>
+    </div>
+
+    <div class="event-meta-field">
+        <label for="event_time"><?php _e( 'Event Time', 'visit-roanoke' ); ?></label>
+        <input type="text" id="event_time" name="event_time" value="<?php echo esc_attr( $event_time ); ?>" placeholder="e.g. 6:00 PM - 9:00 PM">
+        <p class="description"><?php _e( 'Enter the time of the event.', 'visit-roanoke' ); ?></p>
+    </div>
+
+    <div class="event-meta-field">
+        <label for="event_short_desc"><?php _e( 'Short Description', 'visit-roanoke' ); ?></label>
+        <textarea id="event_short_desc" name="event_short_desc" rows="3" placeholder="Brief description for the frontpage"><?php echo esc_textarea( $event_short_desc ); ?></textarea>
+        <p class="description"><?php _e( 'A short description shown on the frontpage. Max 150 characters recommended.', 'visit-roanoke' ); ?></p>
+    </div>
+
+    <div class="event-meta-field">
+        <label for="event_page_id"><?php _e( 'Internal Page Link', 'visit-roanoke' ); ?></label>
+        <select id="event_page_id" name="event_page_id">
+            <option value=""><?php _e( '— Select a page —', 'visit-roanoke' ); ?></option>
+            <?php 
+            if ( $pages ) {
+                foreach ( $pages as $page ) {
+                    // Add indentation for child pages
+                    $indent = '';
+                    if ( $page->post_parent ) {
+                        $ancestors = get_post_ancestors( $page->ID );
+                        $indent = str_repeat( '&nbsp;&nbsp;&nbsp;', count( $ancestors ) );
+                    }
+                    ?>
+                    <option value="<?php echo esc_attr( $page->ID ); ?>" <?php selected( $event_page_id, $page->ID ); ?>>
+                        <?php echo $indent . esc_html( $page->post_title ); ?>
+                    </option>
+                    <?php
+                }
+            }
+            ?>
+        </select>
+        <p class="description"><?php _e( 'Select the page users will be directed to when clicking "Learn More".', 'visit-roanoke' ); ?></p>
+    </div>
+
+    <!-- <div class="event-meta-field">
+        <label>
+            <input type="checkbox" name="event_featured" value="1" <?php checked( $featured, '1' ); ?>>
+            <?php _e( 'Feature this event on the frontpage', 'visit-roanoke' ); ?>
+        </label>
+        <p class="description"><?php _e( 'Featured events will appear in the frontpage events section.', 'visit-roanoke' ); ?></p>
+    </div> -->
+    <?php
+}
+
+/**
+ * Save Event Meta Box Data
+ */
+function visit_roanoke_save_event_meta( $post_id ) {
+    if ( ! isset( $_POST['event_details_nonce'] ) || ! wp_verify_nonce( $_POST['event_details_nonce'], 'event_details_nonce' ) ) {
+        return;
+    }
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+        return;
+    }
+    if ( ! current_user_can( 'edit_post', $post_id ) ) {
+        return;
+    }
+    if ( get_post_type( $post_id ) !== 'event' ) {
+        return;
+    }
+
+    // Save event date
+    if ( isset( $_POST['event_date'] ) ) {
+        update_post_meta( $post_id, '_event_date', sanitize_text_field( $_POST['event_date'] ) );
+    }
+
+    // Save event time
+    if ( isset( $_POST['event_time'] ) ) {
+        update_post_meta( $post_id, '_event_time', sanitize_text_field( $_POST['event_time'] ) );
+    }
+
+    // Save short description
+    if ( isset( $_POST['event_short_desc'] ) ) {
+        update_post_meta( $post_id, '_event_short_desc', sanitize_textarea_field( $_POST['event_short_desc'] ) );
+    }
+
+    // Save page ID
+    if ( isset( $_POST['event_page_id'] ) && ! empty( $_POST['event_page_id'] ) ) {
+        update_post_meta( $post_id, '_event_page_id', intval( $_POST['event_page_id'] ) );
+    } else {
+        delete_post_meta( $post_id, '_event_page_id' );
+    }
+
+    // Save featured status
+    $featured = isset( $_POST['event_featured'] ) ? '1' : '';
+    update_post_meta( $post_id, '_event_featured', $featured );
+}
+add_action( 'save_post', 'visit_roanoke_save_event_meta' );
+
+/**
+ * Add Dining Spotlight Customizer Settings
+ */
+function visit_roanoke_dining_spotlight_customizer( $wp_customize ) {
+    
+    // Add Section
+    $wp_customize->add_section( 'dining_spotlight_section', array(
+        'title'       => __( 'Dining Spotlight', 'visit-roanoke' ),
+        'priority'    => 35,
+        'description' => __( 'Configure the dining spotlight section on the frontpage.', 'visit-roanoke' ),
+    ));
+
+    // Section Title
+    $wp_customize->add_setting( 'dining_spotlight_title', array(
+        'default'           => __( 'Dining Spotlight', 'visit-roanoke' ),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'dining_spotlight_title', array(
+        'label'       => __( 'Section Title', 'visit-roanoke' ),
+        'section'     => 'dining_spotlight_section',
+        'type'        => 'text',
+        'description' => __( 'Main heading for the dining spotlight section.', 'visit-roanoke' ),
+    ));
+
+    // Section Subtitle
+    $wp_customize->add_setting( 'dining_spotlight_subtitle', array(
+        'default'           => __( 'A taste of what makes Roanoke the Unique Dining Capital of Texas. From casual eats to fine dining, downtown has it all.', 'visit-roanoke' ),
+        'sanitize_callback' => 'sanitize_textarea_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'dining_spotlight_subtitle', array(
+        'label'       => __( 'Section Subtitle', 'visit-roanoke' ),
+        'section'     => 'dining_spotlight_section',
+        'type'        => 'textarea',
+        'description' => __( 'Subtitle text below the main heading.', 'visit-roanoke' ),
+    ));
+
+    // Restaurant 1
+    $wp_customize->add_setting( 'dining_spotlight_restaurant_1', array(
+        'default'           => '',
+        'sanitize_callback' => 'absint',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'dining_spotlight_restaurant_1', array(
+        'label'       => __( 'Restaurant 1', 'visit-roanoke' ),
+        'section'     => 'dining_spotlight_section',
+        'type'        => 'dropdown-pages',
+        'description' => __( 'Select a restaurant page to feature.', 'visit-roanoke' ),
+    ));
+
+    // Restaurant 2
+    $wp_customize->add_setting( 'dining_spotlight_restaurant_2', array(
+        'default'           => '',
+        'sanitize_callback' => 'absint',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'dining_spotlight_restaurant_2', array(
+        'label'       => __( 'Restaurant 2', 'visit-roanoke' ),
+        'section'     => 'dining_spotlight_section',
+        'type'        => 'dropdown-pages',
+        'description' => __( 'Select a restaurant page to feature.', 'visit-roanoke' ),
+    ));
+
+    // Restaurant 3
+    $wp_customize->add_setting( 'dining_spotlight_restaurant_3', array(
+        'default'           => '',
+        'sanitize_callback' => 'absint',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'dining_spotlight_restaurant_3', array(
+        'label'       => __( 'Restaurant 3', 'visit-roanoke' ),
+        'section'     => 'dining_spotlight_section',
+        'type'        => 'dropdown-pages',
+        'description' => __( 'Select a restaurant page to feature.', 'visit-roanoke' ),
+    ));
+
+    // "View All" Button Text
+    $wp_customize->add_setting( 'dining_spotlight_button_text', array(
+        'default'           => __( 'View All Restaurants', 'visit-roanoke' ),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'dining_spotlight_button_text', array(
+        'label'       => __( 'Button Text', 'visit-roanoke' ),
+        'section'     => 'dining_spotlight_section',
+        'type'        => 'text',
+        'description' => __( 'Text for the "View All" button.', 'visit-roanoke' ),
+    ));
+
+    // "View All" Button URL
+    $wp_customize->add_setting( 'dining_spotlight_button_url', array(
+        'default'           => '',
+        'sanitize_callback' => 'esc_url_raw',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'dining_spotlight_button_url', array(
+        'label'       => __( 'Button URL', 'visit-roanoke' ),
+        'section'     => 'dining_spotlight_section',
+        'type'        => 'url',
+        'description' => __( 'URL for the "View All" button. Leave empty to use the dining page.', 'visit-roanoke' ),
+    ));
+}
+add_action( 'customize_register', 'visit_roanoke_dining_spotlight_customizer' );
+
+/**
+ * Add Featured Experience Customizer Settings
+ */
+function visit_roanoke_featured_experience_customizer( $wp_customize ) {
+    
+    // Add Section
+    $wp_customize->add_section( 'featured_experience_section', array(
+        'title'       => __( 'Featured Experience', 'visit-roanoke' ),
+        'priority'    => 40,
+        'description' => __( 'Configure the featured experience section on the frontpage.', 'visit-roanoke' ),
+    ));
+
+    // Section Badge (label above title)
+    $wp_customize->add_setting( 'featured_experience_badge', array(
+        'default'           => __( 'Experience', 'visit-roanoke' ),
+        'sanitize_callback' => 'wp_kses_post', // Allow HTML
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'featured_experience_badge', array(
+        'label'       => __( 'Badge/Label', 'visit-roanoke' ),
+        'section'     => 'featured_experience_section',
+        'type'        => 'text',
+        'description' => __( 'The small label above the main title. HTML allowed.', 'visit-roanoke' ),
+    ));
+
+    // Section Title
+    $wp_customize->add_setting( 'featured_experience_title', array(
+        'default'           => __( 'The Unique Dining Capital of Texas', 'visit-roanoke' ),
+        'sanitize_callback' => 'wp_kses_post', // Allow HTML
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'featured_experience_title', array(
+        'label'       => __( 'Main Title', 'visit-roanoke' ),
+        'section'     => 'featured_experience_section',
+        'type'        => 'textarea',
+        'description' => __( 'The main heading. HTML allowed (e.g., <span>highlight</span>).', 'visit-roanoke' ),
+    ));
+
+    // Description Paragraph 1
+    $wp_customize->add_setting( 'featured_experience_desc_1', array(
+        'default'           => __( "From craft breweries to upscale steakhouses, Roanoke's dining scene is unlike anywhere else in the Metroplex. Explore our walkable downtown packed with local flavor, community pride, and energetic event culture.", 'visit-roanoke' ),
+        'sanitize_callback' => 'wp_kses_post', // Allow HTML
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'featured_experience_desc_1', array(
+        'label'       => __( 'Description Paragraph 1', 'visit-roanoke' ),
+        'section'     => 'featured_experience_section',
+        'type'        => 'textarea',
+        'description' => __( 'First paragraph of description. HTML allowed.', 'visit-roanoke' ),
+    ));
+
+    // Description Paragraph 2
+    $wp_customize->add_setting( 'featured_experience_desc_2', array(
+        'default'           => __( 'With over 41 unique restaurants in our compact downtown, every meal is an adventure. Whether you are craving Texas BBQ, authentic Mexican, or innovative fusion cuisine, Roanoke delivers big flavors with small-town hospitality.', 'visit-roanoke' ),
+        'sanitize_callback' => 'wp_kses_post', // Allow HTML
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'featured_experience_desc_2', array(
+        'label'       => __( 'Description Paragraph 2', 'visit-roanoke' ),
+        'section'     => 'featured_experience_section',
+        'type'        => 'textarea',
+        'description' => __( 'Second paragraph of description. HTML allowed.', 'visit-roanoke' ),
+    ));
+
+    // Image
+    $wp_customize->add_setting( 'featured_experience_image', array(
+        'default'           => '',
+        'sanitize_callback' => 'absint',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( new WP_Customize_Media_Control( $wp_customize, 'featured_experience_image', array(
+        'label'       => __( 'Featured Image', 'visit-roanoke' ),
+        'section'     => 'featured_experience_section',
+        'description' => __( 'Upload an image for the featured experience section.', 'visit-roanoke' ),
+        'mime_type'   => 'image',
+    ) ) );
+
+    // Button Text
+    $wp_customize->add_setting( 'featured_experience_btn_text', array(
+        'default'           => __( 'Explore Dining', 'visit-roanoke' ),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'featured_experience_btn_text', array(
+        'label'       => __( 'Button Text', 'visit-roanoke' ),
+        'section'     => 'featured_experience_section',
+        'type'        => 'text',
+        'description' => __( 'Text for the call-to-action button.', 'visit-roanoke' ),
+    ));
+
+    // Button URL
+    $wp_customize->add_setting( 'featured_experience_btn_url', array(
+        'default'           => '',
+        'sanitize_callback' => 'esc_url_raw',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'featured_experience_btn_url', array(
+        'label'       => __( 'Button URL', 'visit-roanoke' ),
+        'section'     => 'featured_experience_section',
+        'type'        => 'url',
+        'description' => __( 'URL for the button. Leave empty to use the dining page.', 'visit-roanoke' ),
+    ));
+
+    // Image Alignment
+    $wp_customize->add_setting( 'featured_experience_image_position', array(
+        'default'           => 'left',
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'featured_experience_image_position', array(
+        'label'       => __( 'Image Position', 'visit-roanoke' ),
+        'section'     => 'featured_experience_section',
+        'type'        => 'select',
+        'choices'     => array(
+            'left'  => __( 'Left', 'visit-roanoke' ),
+            'right' => __( 'Right', 'visit-roanoke' ),
+        ),
+        'description' => __( 'Choose whether the image appears on the left or right.', 'visit-roanoke' ),
+    ));
+}
+add_action( 'customize_register', 'visit_roanoke_featured_experience_customizer' );
+
+// Add selective refresh for live preview
+add_action( 'customize_preview_init', function() {
+    wp_enqueue_script(
+        'featured-experience-customizer',
+        VISIT_ROANOKE_URI . '/assets/js/customizer.js',
+        array( 'jquery', 'customize-preview' ),
+        VISIT_ROANOKE_VERSION,
+        true
+    );
+});
+
+/**
+ * Add Eat/Play/Stay Customizer Settings
+ */
+function visit_roanoke_experience_cards_customizer( $wp_customize ) {
+    
+    // Add Section
+    $wp_customize->add_section( 'experience_cards_section', array(
+        'title'       => __( 'Eat / Play / Stay Cards', 'visit-roanoke' ),
+        'priority'    => 45,
+        'description' => __( 'Configure the three experience cards on the frontpage.', 'visit-roanoke' ),
+    ));
+
+    // Section Badge
+    $wp_customize->add_setting( 'experience_cards_badge', array(
+        'default'           => __( 'Explore', 'visit-roanoke' ),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'experience_cards_badge', array(
+        'label'       => __( 'Section Badge', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'text',
+        'description' => __( 'The small label above the main title.', 'visit-roanoke' ),
+    ));
+
+    // Section Title
+    $wp_customize->add_setting( 'experience_cards_title', array(
+        'default'           => __( 'Experience Roanoke!', 'visit-roanoke' ),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'experience_cards_title', array(
+        'label'       => __( 'Section Title', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'text',
+        'description' => __( 'Main heading for the section.', 'visit-roanoke' ),
+    ));
+
+    // Section Description
+    $wp_customize->add_setting( 'experience_cards_description', array(
+        'default'           => __( 'Whether you are here for a day or a weekend, there is something for everyone in the Unique Dining Capital of Texas.', 'visit-roanoke' ),
+        'sanitize_callback' => 'sanitize_textarea_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'experience_cards_description', array(
+        'label'       => __( 'Section Description', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'textarea',
+        'description' => __( 'Subtitle text below the main heading.', 'visit-roanoke' ),
+    ));
+
+    // ========================================
+    // CARD 1 - DINE
+    // ========================================
+    $wp_customize->add_setting( 'experience_card_1_image', array(
+        'default'           => '',
+        'sanitize_callback' => 'absint',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( new WP_Customize_Media_Control( $wp_customize, 'experience_card_1_image', array(
+        'label'       => __( 'Card 1 - Image', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'description' => __( 'Image for the Dine card.', 'visit-roanoke' ),
+        'mime_type'   => 'image',
+    ) ) );
+
+    $wp_customize->add_setting( 'experience_card_1_tag', array(
+        'default'           => __( 'Dine', 'visit-roanoke' ),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'experience_card_1_tag', array(
+        'label'       => __( 'Card 1 - Tag/Label', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'text',
+        'description' => __( 'Tag text for the Dine card.', 'visit-roanoke' ),
+    ));
+
+    $wp_customize->add_setting( 'experience_card_1_title', array(
+        'default'           => __( 'Over 41 Unique Restaurants', 'visit-roanoke' ),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'experience_card_1_title', array(
+        'label'       => __( 'Card 1 - Title', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'text',
+        'description' => __( 'Title text for the Dine card.', 'visit-roanoke' ),
+    ));
+
+    $wp_customize->add_setting( 'experience_card_1_url', array(
+        'default'           => '',
+        'sanitize_callback' => 'esc_url_raw',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'experience_card_1_url', array(
+        'label'       => __( 'Card 1 - URL', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'url',
+        'description' => __( 'URL for the Dine card. Leave empty to make it non-clickable.', 'visit-roanoke' ),
+    ));
+
+    // Card 1 Accent Colors
+    $wp_customize->add_setting( 'experience_card_1_accent_tl', array(
+        'default'           => 'accent-orange',
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'experience_card_1_accent_tl', array(
+        'label'       => __( 'Card 1 - Top Left Accent', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'select',
+        'choices'     => array(
+            'accent-orange' => __( 'Orange', 'visit-roanoke' ),
+            'accent-blue'   => __( 'Blue', 'visit-roanoke' ),
+            'accent-burnt'  => __( 'Burnt Orange', 'visit-roanoke' ),
+            'accent-navy'   => __( 'Navy', 'visit-roanoke' ),
+        ),
+    ));
+
+    $wp_customize->add_setting( 'experience_card_1_accent_br', array(
+        'default'           => 'accent-blue',
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'experience_card_1_accent_br', array(
+        'label'       => __( 'Card 1 - Bottom Right Accent', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'select',
+        'choices'     => array(
+            'accent-orange' => __( 'Orange', 'visit-roanoke' ),
+            'accent-blue'   => __( 'Blue', 'visit-roanoke' ),
+            'accent-burnt'  => __( 'Burnt Orange', 'visit-roanoke' ),
+            'accent-navy'   => __( 'Navy', 'visit-roanoke' ),
+        ),
+    ));
+
+    // ========================================
+    // CARD 2 - PLAY
+    // ========================================
+    $wp_customize->add_setting( 'experience_card_2_image', array(
+        'default'           => '',
+        'sanitize_callback' => 'absint',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( new WP_Customize_Media_Control( $wp_customize, 'experience_card_2_image', array(
+        'label'       => __( 'Card 2 - Image', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'description' => __( 'Image for the Play card.', 'visit-roanoke' ),
+        'mime_type'   => 'image',
+    ) ) );
+
+    $wp_customize->add_setting( 'experience_card_2_tag', array(
+        'default'           => __( 'Play', 'visit-roanoke' ),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'experience_card_2_tag', array(
+        'label'       => __( 'Card 2 - Tag/Label', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'text',
+        'description' => __( 'Tag text for the Play card.', 'visit-roanoke' ),
+    ));
+
+    $wp_customize->add_setting( 'experience_card_2_title', array(
+        'default'           => __( 'Adventure Awaits', 'visit-roanoke' ),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'experience_card_2_title', array(
+        'label'       => __( 'Card 2 - Title', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'text',
+        'description' => __( 'Title text for the Play card.', 'visit-roanoke' ),
+    ));
+
+    $wp_customize->add_setting( 'experience_card_2_url', array(
+        'default'           => '',
+        'sanitize_callback' => 'esc_url_raw',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'experience_card_2_url', array(
+        'label'       => __( 'Card 2 - URL', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'url',
+        'description' => __( 'URL for the Play card. Leave empty to make it non-clickable.', 'visit-roanoke' ),
+    ));
+
+    // Card 2 Accent Colors
+    $wp_customize->add_setting( 'experience_card_2_accent_tl', array(
+        'default'           => 'accent-blue',
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'experience_card_2_accent_tl', array(
+        'label'       => __( 'Card 2 - Top Left Accent', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'select',
+        'choices'     => array(
+            'accent-orange' => __( 'Orange', 'visit-roanoke' ),
+            'accent-blue'   => __( 'Blue', 'visit-roanoke' ),
+            'accent-burnt'  => __( 'Burnt Orange', 'visit-roanoke' ),
+            'accent-navy'   => __( 'Navy', 'visit-roanoke' ),
+        ),
+    ));
+
+    $wp_customize->add_setting( 'experience_card_2_accent_br', array(
+        'default'           => 'accent-burnt',
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'experience_card_2_accent_br', array(
+        'label'       => __( 'Card 2 - Bottom Right Accent', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'select',
+        'choices'     => array(
+            'accent-orange' => __( 'Orange', 'visit-roanoke' ),
+            'accent-blue'   => __( 'Blue', 'visit-roanoke' ),
+            'accent-burnt'  => __( 'Burnt Orange', 'visit-roanoke' ),
+            'accent-navy'   => __( 'Navy', 'visit-roanoke' ),
+        ),
+    ));
+
+    // ========================================
+    // CARD 3 - STAY
+    // ========================================
+    $wp_customize->add_setting( 'experience_card_3_image', array(
+        'default'           => '',
+        'sanitize_callback' => 'absint',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( new WP_Customize_Media_Control( $wp_customize, 'experience_card_3_image', array(
+        'label'       => __( 'Card 3 - Image', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'description' => __( 'Image for the Stay card.', 'visit-roanoke' ),
+        'mime_type'   => 'image',
+    ) ) );
+
+    $wp_customize->add_setting( 'experience_card_3_tag', array(
+        'default'           => __( 'Stay', 'visit-roanoke' ),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'experience_card_3_tag', array(
+        'label'       => __( 'Card 3 - Tag/Label', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'text',
+        'description' => __( 'Tag text for the Stay card.', 'visit-roanoke' ),
+    ));
+
+    $wp_customize->add_setting( 'experience_card_3_title', array(
+        'default'           => __( 'Comfortable Hotels', 'visit-roanoke' ),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control( 'experience_card_3_title', array(
+        'label'       => __( 'Card 3 - Title', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'text',
+        'description' => __( 'Title text for the Stay card.', 'visit-roanoke' ),
+    ));
+
+    $wp_customize->add_setting( 'experience_card_3_url', array(
+        'default'           => '',
+        'sanitize_callback' => 'esc_url_raw',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'experience_card_3_url', array(
+        'label'       => __( 'Card 3 - URL', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'url',
+        'description' => __( 'URL for the Stay card. Leave empty to make it non-clickable.', 'visit-roanoke' ),
+    ));
+
+    // Card 3 Accent Colors
+    $wp_customize->add_setting( 'experience_card_3_accent_tl', array(
+        'default'           => 'accent-burnt',
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'experience_card_3_accent_tl', array(
+        'label'       => __( 'Card 3 - Top Left Accent', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'select',
+        'choices'     => array(
+            'accent-orange' => __( 'Orange', 'visit-roanoke' ),
+            'accent-blue'   => __( 'Blue', 'visit-roanoke' ),
+            'accent-burnt'  => __( 'Burnt Orange', 'visit-roanoke' ),
+            'accent-navy'   => __( 'Navy', 'visit-roanoke' ),
+        ),
+    ));
+
+    $wp_customize->add_setting( 'experience_card_3_accent_br', array(
+        'default'           => 'accent-orange',
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control( 'experience_card_3_accent_br', array(
+        'label'       => __( 'Card 3 - Bottom Right Accent', 'visit-roanoke' ),
+        'section'     => 'experience_cards_section',
+        'type'        => 'select',
+        'choices'     => array(
+            'accent-orange' => __( 'Orange', 'visit-roanoke' ),
+            'accent-blue'   => __( 'Blue', 'visit-roanoke' ),
+            'accent-burnt'  => __( 'Burnt Orange', 'visit-roanoke' ),
+            'accent-navy'   => __( 'Navy', 'visit-roanoke' ),
+        ),
+    ));
+}
+add_action( 'customize_register', 'visit_roanoke_experience_cards_customizer' );

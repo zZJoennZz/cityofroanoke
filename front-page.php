@@ -213,50 +213,154 @@ get_header();
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
             <?php
-            // Query upcoming events — adjust post type / taxonomy as needed
-            $events = new WP_Query( array(
+            // Query featured events first, then upcoming
+            $events_args = array(
                 'post_type'      => 'event',
                 'posts_per_page' => 4,
-                'meta_key'       => 'event_date',
-                'orderby'        => 'meta_value',
-                'order'          => 'ASC',
                 'meta_query'     => array(
+                    'relation' => 'OR',
                     array(
-                        'key'     => 'event_date',
+                        'key'     => '_event_featured',
+                        'value'   => '1',
+                        'compare' => '=',
+                    ),
+                    array(
+                        'key'     => '_event_date',
                         'value'   => date( 'Y-m-d' ),
                         'compare' => '>=',
                         'type'    => 'DATE',
                     ),
                 ),
-            ) );
+                'orderby'        => array(
+                    'meta_value' => 'DESC', // Featured first
+                    'meta_value' => 'ASC',  // Then by date
+                ),
+                'meta_key'       => '_event_date',
+                'order'          => 'ASC',
+            );
+
+            // If no featured events, just show upcoming
+            $events = new WP_Query( $events_args );
+            
+            // If no events found at all, get all upcoming
+            if ( ! $events->have_posts() ) {
+                $events_args = array(
+                    'post_type'      => 'event',
+                    'posts_per_page' => 4,
+                    'meta_key'       => '_event_date',
+                    'orderby'        => 'meta_value',
+                    'order'          => 'ASC',
+                    'meta_query'     => array(
+                        array(
+                            'key'     => '_event_date',
+                            'value'   => date( 'Y-m-d' ),
+                            'compare' => '>=',
+                            'type'    => 'DATE',
+                        ),
+                    ),
+                );
+                $events = new WP_Query( $events_args );
+            }
 
             if ( $events->have_posts() ) :
                 $delay = 0;
                 while ( $events->have_posts() ) : $events->the_post();
-                    $event_date = get_post_meta( get_the_ID(), 'event_date', true );
+                    // Get event meta
+                    $event_date = get_post_meta( get_the_ID(), '_event_date', true );
+                    $event_time = get_post_meta( get_the_ID(), '_event_time', true );
+                    $event_short_desc = get_post_meta( get_the_ID(), '_event_short_desc', true );
+                    $event_page_id = get_post_meta( get_the_ID(), '_event_page_id', true );
+                    $featured_status = get_post_meta( get_the_ID(), '_event_featured', true );
+                    
+                    // Get the link
+                    if ( $event_page_id ) {
+                        $event_link = get_permalink( $event_page_id );
+                    } else {
+                        $event_link = get_permalink();
+                    }
+                    
+                    // Format date
                     $event_year = $event_date ? date( 'Y', strtotime( $event_date ) ) : date( 'Y' );
                     $event_day  = $event_date ? date( 'M j', strtotime( $event_date ) ) : '';
+                    
+                    // Get short description
+                    $excerpt = $event_short_desc ? $event_short_desc : get_the_excerpt();
+                    
                     $delay_class = $delay > 0 ? ' reveal-delay-' . $delay : '';
+                    $featured_class = $featured_status ? ' featured' : '';
+                    
+                    // Alternate accent colors for visual variety
+                    $accent_colors = array(
+                        'accent-orange accent-blue',
+                        'accent-blue accent-burnt',
+                        'accent-burnt accent-orange',
+                        'accent-orange accent-navy'
+                    );
+                    $color_index = $delay % 4;
             ?>
-                <div class="card-frame reveal<?php echo esc_attr( $delay_class ); ?>">
-                    <div class="corner-accent corner-tl accent-orange"></div>
-                    <div class="corner-accent corner-br accent-blue"></div>
+                <div class="card-frame reveal<?php echo esc_attr( $delay_class . $featured_class ); ?>">
+                    <!-- Decorative corner boxes - Top Left -->
+                    <div class="corner-accent corner-tl <?php echo esc_attr( $accent_colors[$color_index] ); ?>"></div>
+                    <!-- Decorative corner boxes - Top Right -->
+                    <div class="corner-accent corner-tr <?php echo esc_attr( $accent_colors[($color_index + 1) % 4] ); ?>"></div>
+                    <!-- Decorative corner boxes - Bottom Left -->
+                    <div class="corner-accent corner-bl <?php echo esc_attr( $accent_colors[($color_index + 2) % 4] ); ?>"></div>
+                    <!-- Decorative corner boxes - Bottom Right -->
+                    <div class="corner-accent corner-br <?php echo esc_attr( $accent_colors[($color_index + 3) % 4] ); ?>"></div>
+                    
+                    <!-- Small decorative dots along the edges -->
+                    <div class="deco-dot deco-dot-tl"></div>
+                    <div class="deco-dot deco-dot-tr"></div>
+                    <div class="deco-dot deco-dot-bl"></div>
+                    <div class="deco-dot deco-dot-br"></div>
+                    
+                    <?php if ( $featured_status ) : ?>
+                        <div class="featured-badge">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                            <?php esc_html_e( 'Featured', 'visit-roanoke' ); ?>
+                        </div>
+                    <?php endif; ?>
+                    
                     <div class="event-card">
-                        <div class="img-wrap">
-                            <?php if ( has_post_thumbnail() ) : ?>
-                                <?php the_post_thumbnail( 'roanoke-card', array( 'alt' => get_the_title() ) ); ?>
-                            <?php else : ?>
-                                <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/event-placeholder.jpg' ); ?>" alt="<?php the_title_attribute(); ?>">
-                            <?php endif; ?>
-                            <?php if ( $event_day ) : ?>
-                                <span class="date-badge"><?php echo esc_html( $event_day ); ?></span>
-                            <?php endif; ?>
-                            <span class="year-badge"><?php echo esc_html( $event_year ); ?></span>
-                        </div>
-                        <div class="card-body">
-                            <h3 class="font-headline"><?php the_title(); ?></h3>
-                            <p class="font-body"><?php echo esc_html( wp_trim_words( get_the_excerpt(), 8 ) ); ?></p>
-                        </div>
+                        <a href="<?php echo esc_url( $event_link ); ?>" class="event-link">
+                            <div class="img-wrap">
+                                <?php if ( has_post_thumbnail() ) : ?>
+                                    <?php the_post_thumbnail( 'roanoke-card', array( 'alt' => get_the_title() ) ); ?>
+                                <?php else : ?>
+                                    <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/event-placeholder.jpg' ); ?>" alt="<?php the_title_attribute(); ?>">
+                                <?php endif; ?>
+                                
+                                <?php if ( $event_day ) : ?>
+                                    <span class="date-badge"><?php echo esc_html( $event_day ); ?></span>
+                                <?php endif; ?>
+                                
+                                <span class="year-badge"><?php echo esc_html( $event_year ); ?></span>
+                            </div>
+                            
+                            <div class="card-body">
+                                <h3 class="event-title"><?php the_title(); ?></h3>
+                                
+                                <?php if ( $event_time ) : ?>
+                                    <div class="event-time">
+                                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <?php echo esc_html( $event_time ); ?>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <p class="event-description"><?php echo esc_html( wp_trim_words( $excerpt, 10 ) ); ?></p>
+                                
+                                <span class="learn-more">
+                                    <?php esc_html_e( 'Learn More', 'visit-roanoke' ); ?>
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </a>
                     </div>
                 </div>
             <?php
@@ -264,69 +368,149 @@ get_header();
                 endwhile;
                 wp_reset_postdata();
             else :
-                // Fallback static events
+                // Fallback static events with sample data
             ?>
                 <div class="card-frame reveal">
                     <div class="corner-accent corner-tl accent-orange"></div>
-                    <div class="corner-accent corner-br accent-blue"></div>
+                    <div class="corner-accent corner-tr accent-blue"></div>
+                    <div class="corner-accent corner-bl accent-burnt"></div>
+                    <div class="corner-accent corner-br accent-orange"></div>
+                    <div class="deco-dot deco-dot-tl"></div>
+                    <div class="deco-dot deco-dot-tr"></div>
+                    <div class="deco-dot deco-dot-bl"></div>
+                    <div class="deco-dot deco-dot-br"></div>
                     <div class="event-card">
-                        <div class="img-wrap">
-                            <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/events/taste-tunes.jpg' ); ?>" alt="<?php esc_attr_e( 'Taste & Tunes', 'visit-roanoke' ); ?>">
-                            <span class="date-badge">OCT 3</span>
-                            <span class="year-badge">2026</span>
-                        </div>
-                        <div class="card-body">
-                            <h3 class="font-headline"><?php esc_html_e( 'Taste & Tunes', 'visit-roanoke' ); ?></h3>
-                            <p class="font-body"><?php esc_html_e( 'Live music & local flavors downtown', 'visit-roanoke' ); ?></p>
-                        </div>
+                        <a href="#" class="event-link">
+                            <div class="img-wrap">
+                                <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/events/taste-tunes.jpg' ); ?>" alt="<?php esc_attr_e( 'Taste & Tunes', 'visit-roanoke' ); ?>">
+                                <span class="date-badge">OCT 3</span>
+                                <span class="year-badge">2026</span>
+                            </div>
+                            <div class="card-body">
+                                <h3 class="event-title"><?php esc_html_e( 'Taste & Tunes', 'visit-roanoke' ); ?></h3>
+                                <div class="event-time">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <?php esc_html_e( '6:00 PM - 10:00 PM', 'visit-roanoke' ); ?>
+                                </div>
+                                <p class="event-description"><?php esc_html_e( 'Live music & local flavors downtown', 'visit-roanoke' ); ?></p>
+                                <span class="learn-more">
+                                    <?php esc_html_e( 'Learn More', 'visit-roanoke' ); ?>
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </a>
                     </div>
                 </div>
 
                 <div class="card-frame reveal reveal-delay-1">
                     <div class="corner-accent corner-tl accent-blue"></div>
-                    <div class="corner-accent corner-br accent-burnt"></div>
+                    <div class="corner-accent corner-tr accent-burnt"></div>
+                    <div class="corner-accent corner-bl accent-orange"></div>
+                    <div class="corner-accent corner-br accent-blue"></div>
+                    <div class="deco-dot deco-dot-tl"></div>
+                    <div class="deco-dot deco-dot-tr"></div>
+                    <div class="deco-dot deco-dot-bl"></div>
+                    <div class="deco-dot deco-dot-br"></div>
                     <div class="event-card">
-                        <div class="img-wrap">
-                            <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/events/hometown-holiday.jpg' ); ?>" alt="<?php esc_attr_e( 'Hometown Holiday', 'visit-roanoke' ); ?>">
-                            <span class="date-badge" style="background: var(--burnt-orange); color: white;">DEC 4</span>
-                            <span class="year-badge">2026</span>
-                        </div>
-                        <div class="card-body">
-                            <h3 class="font-headline"><?php esc_html_e( 'Hometown Holiday', 'visit-roanoke' ); ?></h3>
-                            <p class="font-body"><?php esc_html_e( 'Celebrate the season with the community', 'visit-roanoke' ); ?></p>
-                        </div>
+                        <a href="#" class="event-link">
+                            <div class="img-wrap">
+                                <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/events/hometown-holiday.jpg' ); ?>" alt="<?php esc_attr_e( 'Hometown Holiday', 'visit-roanoke' ); ?>">
+                                <span class="date-badge" style="background: var(--burnt-orange); color: white;">DEC 4</span>
+                                <span class="year-badge">2026</span>
+                            </div>
+                            <div class="card-body">
+                                <h3 class="event-title"><?php esc_html_e( 'Hometown Holiday', 'visit-roanoke' ); ?></h3>
+                                <div class="event-time">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <?php esc_html_e( 'All Day Event', 'visit-roanoke' ); ?>
+                                </div>
+                                <p class="event-description"><?php esc_html_e( 'Celebrate the season with the community', 'visit-roanoke' ); ?></p>
+                                <span class="learn-more">
+                                    <?php esc_html_e( 'Learn More', 'visit-roanoke' ); ?>
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </a>
                     </div>
                 </div>
 
                 <div class="card-frame reveal reveal-delay-2">
                     <div class="corner-accent corner-tl accent-burnt"></div>
-                    <div class="corner-accent corner-br accent-orange"></div>
+                    <div class="corner-accent corner-tr accent-orange"></div>
+                    <div class="corner-accent corner-bl accent-blue"></div>
+                    <div class="corner-accent corner-br accent-burnt"></div>
+                    <div class="deco-dot deco-dot-tl"></div>
+                    <div class="deco-dot deco-dot-tr"></div>
+                    <div class="deco-dot deco-dot-bl"></div>
+                    <div class="deco-dot deco-dot-br"></div>
                     <div class="event-card">
-                        <div class="img-wrap">
-                            <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/events/celebrate-roanoke.jpg' ); ?>" alt="<?php esc_attr_e( 'Celebrate Roanoke', 'visit-roanoke' ); ?>">
-                            <span class="date-badge">OCT 11</span>
-                            <span class="year-badge">2026</span>
-                        </div>
-                        <div class="card-body">
-                            <h3 class="font-headline"><?php esc_html_e( 'Celebrate Roanoke 2026', 'visit-roanoke' ); ?></h3>
-                            <p class="font-body"><?php esc_html_e( 'Our biggest community festival', 'visit-roanoke' ); ?></p>
-                        </div>
+                        <a href="#" class="event-link">
+                            <div class="img-wrap">
+                                <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/events/celebrate-roanoke.jpg' ); ?>" alt="<?php esc_attr_e( 'Celebrate Roanoke', 'visit-roanoke' ); ?>">
+                                <span class="date-badge">OCT 11</span>
+                                <span class="year-badge">2026</span>
+                            </div>
+                            <div class="card-body">
+                                <h3 class="event-title"><?php esc_html_e( 'Celebrate Roanoke 2026', 'visit-roanoke' ); ?></h3>
+                                <div class="event-time">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <?php esc_html_e( '10:00 AM - 8:00 PM', 'visit-roanoke' ); ?>
+                                </div>
+                                <p class="event-description"><?php esc_html_e( 'Our biggest community festival', 'visit-roanoke' ); ?></p>
+                                <span class="learn-more">
+                                    <?php esc_html_e( 'Learn More', 'visit-roanoke' ); ?>
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </a>
                     </div>
                 </div>
 
                 <div class="card-frame reveal reveal-delay-3">
                     <div class="corner-accent corner-tl accent-orange"></div>
-                    <div class="corner-accent corner-br accent-navy"></div>
+                    <div class="corner-accent corner-tr accent-navy"></div>
+                    <div class="corner-accent corner-bl accent-orange"></div>
+                    <div class="corner-accent corner-br accent-blue"></div>
+                    <div class="deco-dot deco-dot-tl"></div>
+                    <div class="deco-dot deco-dot-tr"></div>
+                    <div class="deco-dot deco-dot-bl"></div>
+                    <div class="deco-dot deco-dot-br"></div>
                     <div class="event-card">
-                        <div class="img-wrap">
-                            <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/events/holiday-plaza.jpg' ); ?>" alt="<?php esc_attr_e( 'Holiday in the Plaza', 'visit-roanoke' ); ?>">
-                            <span class="date-badge" style="background: var(--burnt-orange); color: white;">DEC 4</span>
-                            <span class="year-badge">2026</span>
-                        </div>
-                        <div class="card-body">
-                            <h3 class="font-headline"><?php esc_html_e( 'Holiday in the Plaza', 'visit-roanoke' ); ?></h3>
-                            <p class="font-body"><?php esc_html_e( 'Family fun in the square', 'visit-roanoke' ); ?></p>
-                        </div>
+                        <a href="#" class="event-link">
+                            <div class="img-wrap">
+                                <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/events/holiday-plaza.jpg' ); ?>" alt="<?php esc_attr_e( 'Holiday in the Plaza', 'visit-roanoke' ); ?>">
+                                <span class="date-badge" style="background: var(--burnt-orange); color: white;">DEC 4</span>
+                                <span class="year-badge">2026</span>
+                            </div>
+                            <div class="card-body">
+                                <h3 class="event-title"><?php esc_html_e( 'Holiday in the Plaza', 'visit-roanoke' ); ?></h3>
+                                <div class="event-time">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <?php esc_html_e( '4:00 PM - 10:00 PM', 'visit-roanoke' ); ?>
+                                </div>
+                                <p class="event-description"><?php esc_html_e( 'Family fun in the square', 'visit-roanoke' ); ?></p>
+                                <span class="learn-more">
+                                    <?php esc_html_e( 'Learn More', 'visit-roanoke' ); ?>
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </a>
                     </div>
                 </div>
             <?php endif; ?>
@@ -340,52 +524,111 @@ get_header();
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div class="text-center mb-12 reveal">
             <span class="text-orange text-xs font-headline font-black tracking-[0.2em] uppercase mb-3 block"><?php esc_html_e( 'Local Favorites', 'visit-roanoke' ); ?></span>
-            <h2 class="font-headline text-4xl md:text-5xl font-black text-white mb-4"><?php esc_html_e( 'Dining Spotlight', 'visit-roanoke' ); ?></h2>
-            <p class="text-white/60 text-lg max-w-2xl mx-auto font-body"><?php esc_html_e( 'A taste of what makes Roanoke the Unique Dining Capital of Texas. From casual eats to fine dining, downtown has it all.', 'visit-roanoke' ); ?></p>
+            <h2 class="font-headline text-4xl md:text-5xl font-black text-white mb-4">
+                <?php echo esc_html( get_theme_mod( 'dining_spotlight_title', __( 'Dining Spotlight', 'visit-roanoke' ) ) ); ?>
+            </h2>
+            <p class="text-white/60 text-lg max-w-2xl mx-auto font-body">
+                <?php echo esc_html( get_theme_mod( 'dining_spotlight_subtitle', __( 'A taste of what makes Roanoke the Unique Dining Capital of Texas. From casual eats to fine dining, downtown has it all.', 'visit-roanoke' ) ) ); ?>
+            </p>
         </div>
 
         <div class="grid md:grid-cols-3 gap-6">
 
             <?php
-            // Query featured restaurants — adjust post type as needed
-            $restaurants = new WP_Query( array(
-                'post_type'      => 'restaurant',
-                'posts_per_page' => 3,
-                'meta_key'       => 'featured',
-                'meta_value'     => '1',
-            ) );
+            // Get featured restaurants from Customizer
+            $restaurant_ids = array(
+                get_theme_mod( 'dining_spotlight_restaurant_1', 0 ),
+                get_theme_mod( 'dining_spotlight_restaurant_2', 0 ),
+                get_theme_mod( 'dining_spotlight_restaurant_3', 0 ),
+            );
+            
+            // Remove empty values
+            $restaurant_ids = array_filter( $restaurant_ids );
+            
+            // If no restaurants selected in Customizer, query featured restaurants
+            if ( empty( $restaurant_ids ) ) {
+                $restaurants = new WP_Query( array(
+                    'post_type'      => 'restaurant',
+                    'posts_per_page' => 3,
+                    'meta_key'       => '_restaurant_featured',
+                    'meta_value'     => '1',
+                    'meta_compare'   => '=',
+                ) );
+            } else {
+                // Query specific restaurants by ID
+                $restaurants = new WP_Query( array(
+                    'post_type'      => 'any', // Include pages and custom post types
+                    'posts_per_page' => 3,
+                    'post__in'       => $restaurant_ids,
+                    'orderby'        => 'post__in',
+                ) );
+            }
 
             if ( $restaurants->have_posts() ) :
                 $delay = 0;
                 while ( $restaurants->have_posts() ) : $restaurants->the_post();
-                    $cuisine  = get_post_meta( get_the_ID(), 'cuisine_type', true );
-                    $rating   = get_post_meta( get_the_ID(), 'rating', true );
+                    // Get restaurant meta (works for both pages and custom post types)
+                    $cuisine  = get_post_meta( get_the_ID(), '_restaurant_cuisine', true );
+                    $cuisine  = $cuisine ? $cuisine : get_post_meta( get_the_ID(), 'cuisine_type', true );
+                    
+                    $rating   = get_post_meta( get_the_ID(), '_restaurant_rating', true );
+                    $rating   = $rating ? floatval( $rating ) : get_post_meta( get_the_ID(), 'rating', true );
                     $rating   = $rating ? floatval( $rating ) : 5;
+                    
                     $delay_class = $delay > 0 ? ' reveal-delay-' . $delay : '';
+                    
+                    // Alternate accent colors
+                    $accent_colors = array(
+                        'accent-orange accent-blue',
+                        'accent-blue accent-burnt',
+                        'accent-burnt accent-orange'
+                    );
+                    $color_index = $delay % 3;
             ?>
                 <div class="card-frame reveal<?php echo esc_attr( $delay_class ); ?>">
-                    <div class="corner-accent corner-tl accent-orange"></div>
-                    <div class="corner-accent corner-br accent-blue"></div>
+                    <div class="corner-accent corner-tl <?php echo esc_attr( $accent_colors[$color_index] ); ?>"></div>
+                    <div class="corner-accent corner-tr <?php echo esc_attr( $accent_colors[($color_index + 1) % 3] ); ?>"></div>
+                    <div class="corner-accent corner-bl <?php echo esc_attr( $accent_colors[($color_index + 2) % 3] ); ?>"></div>
+                    <div class="corner-accent corner-br <?php echo esc_attr( $accent_colors[($color_index + 3) % 3] ); ?>"></div>
+                    
+                    <div class="deco-dot deco-dot-tl"></div>
+                    <div class="deco-dot deco-dot-tr"></div>
+                    <div class="deco-dot deco-dot-bl"></div>
+                    <div class="deco-dot deco-dot-br"></div>
+                    
                     <div class="restaurant-card">
-                        <div class="rest-img">
-                            <?php if ( has_post_thumbnail() ) : ?>
-                                <?php the_post_thumbnail( 'roanoke-card', array( 'alt' => get_the_title() ) ); ?>
-                            <?php else : ?>
-                                <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/dining-placeholder.jpg' ); ?>" alt="<?php the_title_attribute(); ?>">
-                            <?php endif; ?>
-                        </div>
-                        <div class="rest-body">
-                            <?php if ( $cuisine ) : ?>
-                                <span class="cuisine-tag font-headline"><?php echo esc_html( $cuisine ); ?></span>
-                            <?php endif; ?>
-                            <div class="star-rating mb-2">
-                                <?php for ( $i = 1; $i <= 5; $i++ ) : ?>
-                                    <?php echo $i <= $rating ? '&#9733;' : '&#9734;'; ?>
-                                <?php endfor; ?>
+                        <a href="<?php the_permalink(); ?>" class="restaurant-link">
+                            <div class="rest-img">
+                                <?php if ( has_post_thumbnail() ) : ?>
+                                    <?php the_post_thumbnail( 'roanoke-card', array( 'alt' => get_the_title() ) ); ?>
+                                <?php else : ?>
+                                    <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/dining-placeholder.jpg' ); ?>" alt="<?php the_title_attribute(); ?>">
+                                <?php endif; ?>
                             </div>
-                            <h4 class="font-headline"><?php the_title(); ?></h4>
-                            <p class="font-body"><?php echo esc_html( wp_trim_words( get_the_excerpt(), 12 ) ); ?></p>
-                        </div>
+                            <div class="rest-body">
+                                <?php if ( $cuisine ) : ?>
+                                    <span class="cuisine-tag font-headline"><?php echo esc_html( $cuisine ); ?></span>
+                                <?php endif; ?>
+                                
+                                <div class="star-rating mb-2">
+                                    <?php for ( $i = 1; $i <= 5; $i++ ) : ?>
+                                        <span class="star <?php echo $i <= $rating ? 'star-filled' : 'star-empty'; ?>">
+                                            <?php echo $i <= $rating ? '&#9733;' : '&#9734;'; ?>
+                                        </span>
+                                    <?php endfor; ?>
+                                </div>
+                                
+                                <h4 class="font-headline"><?php the_title(); ?></h4>
+                                <p class="font-body"><?php echo esc_html( wp_trim_words( get_the_excerpt(), 12 ) ); ?></p>
+                                
+                                <span class="learn-more">
+                                    <?php esc_html_e( 'Learn More', 'visit-roanoke' ); ?>
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </a>
                     </div>
                 </div>
             <?php
@@ -393,52 +636,106 @@ get_header();
                 endwhile;
                 wp_reset_postdata();
             else :
-                // Fallback static restaurants
+                // Fallback static restaurants with sample data
             ?>
                 <div class="card-frame reveal">
                     <div class="corner-accent corner-tl accent-orange"></div>
-                    <div class="corner-accent corner-br accent-blue"></div>
+                    <div class="corner-accent corner-tr accent-blue"></div>
+                    <div class="corner-accent corner-bl accent-burnt"></div>
+                    <div class="corner-accent corner-br accent-orange"></div>
+                    <div class="deco-dot deco-dot-tl"></div>
+                    <div class="deco-dot deco-dot-tr"></div>
+                    <div class="deco-dot deco-dot-bl"></div>
+                    <div class="deco-dot deco-dot-br"></div>
                     <div class="restaurant-card">
                         <div class="rest-img">
                             <img src="https://placehold.co/600x400/1e293b/FFF?text=Restaurant" alt="<?php esc_attr_e( 'Restaurant placeholder image', 'visit-roanoke' ); ?>">
                         </div>
                         <div class="rest-body">
                             <span class="cuisine-tag font-headline"><?php esc_html_e( 'Cuisine Type', 'visit-roanoke' ); ?></span>
-                            <div class="star-rating mb-2">&#9733; &#9733; &#9733; &#9733; &#9733;</div>
+                            <div class="star-rating mb-2">
+                                <span class="star-filled">&#9733;</span>
+                                <span class="star-filled">&#9733;</span>
+                                <span class="star-filled">&#9733;</span>
+                                <span class="star-filled">&#9733;</span>
+                                <span class="star-filled">&#9733;</span>
+                            </div>
                             <h4 class="font-headline"><?php esc_html_e( 'Restaurant Name', 'visit-roanoke' ); ?></h4>
                             <p class="font-body"><?php esc_html_e( 'Description of the dining experience, menu highlights, and atmosphere goes here.', 'visit-roanoke' ); ?></p>
+                            <span class="learn-more">
+                                <?php esc_html_e( 'Learn More', 'visit-roanoke' ); ?>
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </span>
                         </div>
                     </div>
                 </div>
 
                 <div class="card-frame reveal reveal-delay-1">
                     <div class="corner-accent corner-tl accent-blue"></div>
-                    <div class="corner-accent corner-br accent-burnt"></div>
+                    <div class="corner-accent corner-tr accent-burnt"></div>
+                    <div class="corner-accent corner-bl accent-orange"></div>
+                    <div class="corner-accent corner-br accent-blue"></div>
+                    <div class="deco-dot deco-dot-tl"></div>
+                    <div class="deco-dot deco-dot-tr"></div>
+                    <div class="deco-dot deco-dot-bl"></div>
+                    <div class="deco-dot deco-dot-br"></div>
                     <div class="restaurant-card">
                         <div class="rest-img">
                             <img src="https://placehold.co/600x400/334155/FFF?text=Dining" alt="<?php esc_attr_e( 'Restaurant placeholder image', 'visit-roanoke' ); ?>">
                         </div>
                         <div class="rest-body">
                             <span class="cuisine-tag font-headline"><?php esc_html_e( 'Dining Style', 'visit-roanoke' ); ?></span>
-                            <div class="star-rating mb-2">&#9733; &#9733; &#9733; &#9733; &#9733;</div>
+                            <div class="star-rating mb-2">
+                                <span class="star-filled">&#9733;</span>
+                                <span class="star-filled">&#9733;</span>
+                                <span class="star-filled">&#9733;</span>
+                                <span class="star-filled">&#9733;</span>
+                                <span class="star-filled">&#9733;</span>
+                            </div>
                             <h4 class="font-headline"><?php esc_html_e( 'Bistro Name', 'visit-roanoke' ); ?></h4>
                             <p class="font-body"><?php esc_html_e( 'Fresh ingredients and quality service in a welcoming setting.', 'visit-roanoke' ); ?></p>
+                            <span class="learn-more">
+                                <?php esc_html_e( 'Learn More', 'visit-roanoke' ); ?>
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </span>
                         </div>
                     </div>
                 </div>
 
                 <div class="card-frame reveal reveal-delay-2">
                     <div class="corner-accent corner-tl accent-burnt"></div>
-                    <div class="corner-accent corner-br accent-orange"></div>
+                    <div class="corner-accent corner-tr accent-orange"></div>
+                    <div class="corner-accent corner-bl accent-blue"></div>
+                    <div class="corner-accent corner-br accent-burnt"></div>
+                    <div class="deco-dot deco-dot-tl"></div>
+                    <div class="deco-dot deco-dot-tr"></div>
+                    <div class="deco-dot deco-dot-bl"></div>
+                    <div class="deco-dot deco-dot-br"></div>
                     <div class="restaurant-card">
                         <div class="rest-img">
                             <img src="https://placehold.co/600x400/475569/FFF?text=Cafe" alt="<?php esc_attr_e( 'Restaurant placeholder image', 'visit-roanoke' ); ?>">
                         </div>
                         <div class="rest-body">
                             <span class="cuisine-tag font-headline"><?php esc_html_e( 'Food Category', 'visit-roanoke' ); ?></span>
-                            <div class="star-rating mb-2">&#9733; &#9733; &#9733; &#9733; &#9734;</div>
+                            <div class="star-rating mb-2">
+                                <span class="star-filled">&#9733;</span>
+                                <span class="star-filled">&#9733;</span>
+                                <span class="star-filled">&#9733;</span>
+                                <span class="star-filled">&#9733;</span>
+                                <span class="star-empty">&#9734;</span>
+                            </div>
                             <h4 class="font-headline"><?php esc_html_e( 'Cafe Name', 'visit-roanoke' ); ?></h4>
                             <p class="font-body"><?php esc_html_e( 'Local flavors and seasonal menus served in a casual atmosphere.', 'visit-roanoke' ); ?></p>
+                            <span class="learn-more">
+                                <?php esc_html_e( 'Learn More', 'visit-roanoke' ); ?>
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -447,8 +744,16 @@ get_header();
         </div>
 
         <div class="text-center mt-10 reveal">
-            <a href="<?php echo esc_url( get_permalink( get_page_by_path( 'dining' ) ) ); ?>" class="inline-flex items-center text-white font-headline font-bold text-sm uppercase tracking-wider hover:text-orange transition group">
-                <?php esc_html_e( 'View All Restaurants', 'visit-roanoke' ); ?>
+            <?php
+            $button_url = get_theme_mod( 'dining_spotlight_button_url', '' );
+            if ( empty( $button_url ) ) {
+                $dining_page = get_page_by_path( 'dining' );
+                $button_url = $dining_page ? get_permalink( $dining_page->ID ) : '#';
+            }
+            $button_text = get_theme_mod( 'dining_spotlight_button_text', __( 'View All Restaurants', 'visit-roanoke' ) );
+            ?>
+            <a href="<?php echo esc_url( $button_url ); ?>" class="inline-flex items-center text-white font-headline font-bold text-sm uppercase tracking-wider hover:text-orange transition group">
+                <?php echo esc_html( $button_text ); ?>
                 <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
             </a>
         </div>
@@ -562,85 +867,206 @@ get_header();
 </section>
 
 <!-- ==================== FEATURED EXPERIENCE ==================== -->
+<?php
+// Get Customizer settings
+$badge = get_theme_mod( 'featured_experience_badge', __( 'Experience', 'visit-roanoke' ) );
+$title = get_theme_mod( 'featured_experience_title', __( 'The Unique Dining Capital of Texas', 'visit-roanoke' ) );
+$desc_1 = get_theme_mod( 'featured_experience_desc_1', __( "From craft breweries to upscale steakhouses, Roanoke's dining scene is unlike anywhere else in the Metroplex. Explore our walkable downtown packed with local flavor, community pride, and energetic event culture.", 'visit-roanoke' ) );
+$desc_2 = get_theme_mod( 'featured_experience_desc_2', __( 'With over 41 unique restaurants in our compact downtown, every meal is an adventure. Whether you are craving Texas BBQ, authentic Mexican, or innovative fusion cuisine, Roanoke delivers big flavors with small-town hospitality.', 'visit-roanoke' ) );
+$image_id = get_theme_mod( 'featured_experience_image', '' );
+$btn_text = get_theme_mod( 'featured_experience_btn_text', __( 'Explore Dining', 'visit-roanoke' ) );
+$btn_url = get_theme_mod( 'featured_experience_btn_url', '' );
+$image_position = get_theme_mod( 'featured_experience_image_position', 'left' );
+
+// Get image URL
+if ( $image_id ) {
+    $image_url = wp_get_attachment_image_url( $image_id, 'large' );
+} else {
+    $image_url = VISIT_ROANOKE_URI . '/assets/images/featured-dining.jpg';
+}
+
+// Button URL fallback
+if ( empty( $btn_url ) ) {
+    $dining_page = get_page_by_path( 'dining' );
+    $btn_url = $dining_page ? get_permalink( $dining_page->ID ) : '#';
+}
+
+// Determine grid order
+$grid_classes = 'grid md:grid-cols-2 gap-10 items-center';
+$image_order_class = $image_position === 'right' ? 'md:order-last' : '';
+?>
 <section class="featured-section">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid md:grid-cols-2 gap-10 items-center">
-            <div class="card-frame featured-img-wrap">
+        <div class="<?php echo esc_attr( $grid_classes ); ?>">
+            <!-- Image Side -->
+            <div class="card-frame featured-img-wrap <?php echo esc_attr( $image_order_class ); ?>">
                 <div class="corner-accent corner-tl accent-orange"></div>
                 <div class="corner-accent corner-br accent-blue"></div>
                 <div class="corner-accent corner-tr accent-burnt"></div>
                 <div class="corner-accent corner-bl accent-navy"></div>
-                <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/featured-dining.jpg' ); ?>" alt="<?php esc_attr_e( 'Featured Experience', 'visit-roanoke' ); ?>" class="relative z-10" style="height: 450px;">
+                
+                <div class="deco-dot deco-dot-tl"></div>
+                <div class="deco-dot deco-dot-tr"></div>
+                <div class="deco-dot deco-dot-bl"></div>
+                <div class="deco-dot deco-dot-br"></div>
+                
+                <div class="featured-image-wrapper">
+                    <img src="<?php echo esc_url( $image_url ); ?>" 
+                         alt="<?php esc_attr_e( 'Featured Experience', 'visit-roanoke' ); ?>" 
+                         class="relative z-10 featured-image"
+                         style="height: 450px; width: 100%; object-fit: cover;">
+                </div>
             </div>
 
-            <div class="reveal">
-                <span class="text-orange text-xs font-headline font-black tracking-[0.2em] uppercase mb-3 block"><?php esc_html_e( 'Experience', 'visit-roanoke' ); ?></span>
-                <h2 class="font-headline text-4xl md:text-5xl font-black text-navy mb-5 leading-[1.1]"><?php esc_html_e( 'The Unique Dining Capital of Texas', 'visit-roanoke' ); ?></h2>
-                <p class="text-navy/70 mb-6 leading-relaxed text-lg font-body">
-                    <?php esc_html_e( "From craft breweries to upscale steakhouses, Roanoke's dining scene is unlike anywhere else in the Metroplex. Explore our walkable downtown packed with local flavor, community pride, and energetic event culture.', 'visit-roanoke" ); ?>
-                </p>
-                <p class="text-navy/60 mb-8 leading-relaxed font-body">
-                    <?php esc_html_e( 'With over 41 unique restaurants in our compact downtown, every meal is an adventure. Whether you are craving Texas BBQ, authentic Mexican, or innovative fusion cuisine, Roanoke delivers big flavors with small-town hospitality.', 'visit-roanoke' ); ?>
-                </p>
-                <a href="<?php echo esc_url( get_permalink( get_page_by_path( 'dining' ) ) ); ?>" class="inline-flex items-center bg-navy text-white px-8 py-3.5 rounded-sm font-headline font-bold text-sm uppercase tracking-wider hover:bg-orange transition group shadow-lg">
-                    <?php esc_html_e( 'Explore Dining', 'visit-roanoke' ); ?>
-                    <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-                </a>
+            <!-- Content Side -->
+            <div class="featured-content reveal">
+                <?php if ( $badge ) : ?>
+                    <span class="text-orange text-xs font-headline font-black tracking-[0.2em] uppercase mb-3 block">
+                        <?php echo wp_kses_post( $badge ); ?>
+                    </span>
+                <?php endif; ?>
+                
+                <?php if ( $title ) : ?>
+                    <h2 class="font-headline text-4xl md:text-5xl font-black text-navy mb-5 leading-[1.1]">
+                        <?php echo wp_kses_post( $title ); ?>
+                    </h2>
+                <?php endif; ?>
+                
+                <?php if ( $desc_1 ) : ?>
+                    <p class="text-navy/70 mb-6 leading-relaxed text-lg font-body">
+                        <?php echo wp_kses_post( $desc_1 ); ?>
+                    </p>
+                <?php endif; ?>
+                
+                <?php if ( $desc_2 ) : ?>
+                    <p class="text-navy/60 mb-8 leading-relaxed font-body">
+                        <?php echo wp_kses_post( $desc_2 ); ?>
+                    </p>
+                <?php endif; ?>
+                
+                <?php if ( $btn_text && $btn_url ) : ?>
+                    <a href="<?php echo esc_url( $btn_url ); ?>" 
+                       class="inline-flex items-center bg-navy text-white px-8 py-3.5 rounded-sm font-headline font-bold text-sm uppercase tracking-wider hover:bg-orange transition group shadow-lg">
+                        <?php echo esc_html( $btn_text ); ?>
+                        <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                        </svg>
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 </section>
 
 <!-- ==================== EAT / PLAY / STAY ==================== -->
+<?php
+// Get Customizer settings
+$badge = get_theme_mod( 'experience_cards_badge', __( 'Explore', 'visit-roanoke' ) );
+$title = get_theme_mod( 'experience_cards_title', __( 'Experience Roanoke!', 'visit-roanoke' ) );
+$description = get_theme_mod( 'experience_cards_description', __( 'Whether you are here for a day or a weekend, there is something for everyone in the Unique Dining Capital of Texas.', 'visit-roanoke' ) );
+
+// Card 1 - Dine
+$card_1_image = get_theme_mod( 'experience_card_1_image', '' );
+$card_1_image_url = $card_1_image ? wp_get_attachment_image_url( $card_1_image, 'medium_large' ) : VISIT_ROANOKE_URI . '/assets/images/experience/dine.jpg';
+$card_1_tag = get_theme_mod( 'experience_card_1_tag', __( 'Dine', 'visit-roanoke' ) );
+$card_1_title = get_theme_mod( 'experience_card_1_title', __( 'Over 41 Unique Restaurants', 'visit-roanoke' ) );
+$card_1_url = get_theme_mod( 'experience_card_1_url', '' );
+$card_1_accent_tl = get_theme_mod( 'experience_card_1_accent_tl', 'accent-orange' );
+$card_1_accent_br = get_theme_mod( 'experience_card_1_accent_br', 'accent-blue' );
+
+// Card 2 - Play
+$card_2_image = get_theme_mod( 'experience_card_2_image', '' );
+$card_2_image_url = $card_2_image ? wp_get_attachment_image_url( $card_2_image, 'medium_large' ) : VISIT_ROANOKE_URI . '/assets/images/experience/play.jpg';
+$card_2_tag = get_theme_mod( 'experience_card_2_tag', __( 'Play', 'visit-roanoke' ) );
+$card_2_title = get_theme_mod( 'experience_card_2_title', __( 'Adventure Awaits', 'visit-roanoke' ) );
+$card_2_url = get_theme_mod( 'experience_card_2_url', '' );
+$card_2_accent_tl = get_theme_mod( 'experience_card_2_accent_tl', 'accent-blue' );
+$card_2_accent_br = get_theme_mod( 'experience_card_2_accent_br', 'accent-burnt' );
+
+// Card 3 - Stay
+$card_3_image = get_theme_mod( 'experience_card_3_image', '' );
+$card_3_image_url = $card_3_image ? wp_get_attachment_image_url( $card_3_image, 'medium_large' ) : VISIT_ROANOKE_URI . '/assets/images/experience/stay.jpg';
+$card_3_tag = get_theme_mod( 'experience_card_3_tag', __( 'Stay', 'visit-roanoke' ) );
+$card_3_title = get_theme_mod( 'experience_card_3_title', __( 'Comfortable Hotels', 'visit-roanoke' ) );
+$card_3_url = get_theme_mod( 'experience_card_3_url', '' );
+$card_3_accent_tl = get_theme_mod( 'experience_card_3_accent_tl', 'accent-burnt' );
+$card_3_accent_br = get_theme_mod( 'experience_card_3_accent_br', 'accent-orange' );
+
+// Helper function to build card HTML
+function render_experience_card( $image_url, $tag, $title, $url, $accent_tl, $accent_br, $delay = '' ) {
+    $card_content = '<div class="exp-card">
+        <img src="' . esc_url( $image_url ) . '" alt="' . esc_attr( $tag ) . '">
+        <div class="overlay"></div>
+        <div class="content">
+            <span class="tag font-headline">' . esc_html( $tag ) . '</span>
+            <h3 class="font-headline">' . esc_html( $title ) . '</h3>
+        </div>
+    </div>';
+    
+    if ( ! empty( $url ) ) {
+        $card_content = '<a href="' . esc_url( $url ) . '" class="exp-card-link">' . $card_content . '</a>';
+    }
+    
+    return '<div class="card-frame reveal' . esc_attr( $delay ) . '">
+        <div class="corner-accent corner-tl ' . esc_attr( $accent_tl ) . '"></div>
+        <div class="corner-accent corner-br ' . esc_attr( $accent_br ) . '"></div>
+        <div class="corner-accent corner-tr ' . esc_attr( $accent_tl ) . '"></div>
+        <div class="corner-accent corner-bl ' . esc_attr( $accent_br ) . '"></div>
+        <div class="deco-dot deco-dot-tl"></div>
+        <div class="deco-dot deco-dot-tr"></div>
+        <div class="deco-dot deco-dot-bl"></div>
+        <div class="deco-dot deco-dot-br"></div>
+        ' . $card_content . '
+    </div>';
+}
+?>
 <section class="experience-section">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div class="text-center mb-12 reveal">
-            <span class="text-orange text-xs font-headline font-black tracking-[0.2em] uppercase mb-3 block"><?php esc_html_e( 'Explore', 'visit-roanoke' ); ?></span>
-            <h2 class="font-headline text-4xl md:text-5xl font-black text-white mb-4"><?php esc_html_e( 'Experience Roanoke!', 'visit-roanoke' ); ?></h2>
-            <p class="text-white/60 text-lg max-w-2xl mx-auto font-body"><?php esc_html_e( 'Whether you are here for a day or a weekend, there is something for everyone in the Unique Dining Capital of Texas.', 'visit-roanoke' ); ?></p>
+            <?php if ( $badge ) : ?>
+                <span class="text-orange text-xs font-headline font-black tracking-[0.2em] uppercase mb-3 block"><?php echo esc_html( $badge ); ?></span>
+            <?php endif; ?>
+            
+            <?php if ( $title ) : ?>
+                <h2 class="font-headline text-4xl md:text-5xl font-black text-white mb-4"><?php echo esc_html( $title ); ?></h2>
+            <?php endif; ?>
+            
+            <?php if ( $description ) : ?>
+                <p class="text-white/60 text-lg max-w-2xl mx-auto font-body"><?php echo esc_html( $description ); ?></p>
+            <?php endif; ?>
         </div>
 
         <div class="grid md:grid-cols-3 gap-6">
-
-            <div class="card-frame reveal">
-                <div class="corner-accent corner-tl accent-orange"></div>
-                <div class="corner-accent corner-br accent-blue"></div>
-                <div class="exp-card">
-                    <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/experience/dine.jpg' ); ?>" alt="<?php esc_attr_e( 'Dine', 'visit-roanoke' ); ?>">
-                    <div class="overlay"></div>
-                    <div class="content">
-                        <span class="tag font-headline"><?php esc_html_e( 'Dine', 'visit-roanoke' ); ?></span>
-                        <h3 class="font-headline"><?php esc_html_e( 'Over 41 Unique Restaurants', 'visit-roanoke' ); ?></h3>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card-frame reveal reveal-delay-1">
-                <div class="corner-accent corner-tl accent-blue"></div>
-                <div class="corner-accent corner-br accent-burnt"></div>
-                <div class="exp-card">
-                    <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/experience/play.jpg' ); ?>" alt="<?php esc_attr_e( 'Play', 'visit-roanoke' ); ?>">
-                    <div class="overlay"></div>
-                    <div class="content">
-                        <span class="tag font-headline"><?php esc_html_e( 'Play', 'visit-roanoke' ); ?></span>
-                        <h3 class="font-headline"><?php esc_html_e( 'Adventure Awaits', 'visit-roanoke' ); ?></h3>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card-frame reveal reveal-delay-2">
-                <div class="corner-accent corner-tl accent-burnt"></div>
-                <div class="corner-accent corner-br accent-orange"></div>
-                <div class="exp-card">
-                    <img src="<?php echo esc_url( VISIT_ROANOKE_URI . '/assets/images/experience/stay.jpg' ); ?>" alt="<?php esc_attr_e( 'Stay', 'visit-roanoke' ); ?>">
-                    <div class="overlay"></div>
-                    <div class="content">
-                        <span class="tag font-headline"><?php esc_html_e( 'Stay', 'visit-roanoke' ); ?></span>
-                        <h3 class="font-headline"><?php esc_html_e( 'Comfortable Hotels', 'visit-roanoke' ); ?></h3>
-                    </div>
-                </div>
-            </div>
-
+            <?php 
+            echo render_experience_card( 
+                $card_1_image_url, 
+                $card_1_tag, 
+                $card_1_title, 
+                $card_1_url, 
+                $card_1_accent_tl, 
+                $card_1_accent_br 
+            );
+            
+            echo render_experience_card( 
+                $card_2_image_url, 
+                $card_2_tag, 
+                $card_2_title, 
+                $card_2_url, 
+                $card_2_accent_tl, 
+                $card_2_accent_br,
+                ' reveal-delay-1'
+            );
+            
+            echo render_experience_card( 
+                $card_3_image_url, 
+                $card_3_tag, 
+                $card_3_title, 
+                $card_3_url, 
+                $card_3_accent_tl, 
+                $card_3_accent_br,
+                ' reveal-delay-2'
+            );
+            ?>
         </div>
     </div>
 </section>

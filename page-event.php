@@ -3,11 +3,6 @@
  * Template Name: Event Page
  * Description: Reusable event template with customizable color scheme.
  *              Uses native WordPress post meta — NO PLUGIN REQUIRED.
- * 
- * INSTALLATION:
- * 1. Copy this file to: /wp-content/themes/cityofroanoke/template-event.php
- * 2. Copy functions-event-meta.php contents into your theme's functions.php
- * 3. Create a Page, set Template to "Event Page", fill in the "Event Page Details" meta box
  */
 
 get_header();
@@ -31,11 +26,11 @@ function roanoke_event_meta_array($key) {
 // ─── COLOR SCHEMES ───
 $scheme = roanoke_event_meta('color_scheme', 'custom');
 $presets = [
-    'fireworks' => ['primary' => '#B91C1C', 'secondary' => '#1E3A5F', 'accent' => '#F59E0B', 'dark' => '#0F172A', 'light' => '#FEF2F2'],
-    'celebrate' => ['primary' => '#D97706', 'secondary' => '#7C2D12', 'accent' => '#FCD34D', 'dark' => '#431407', 'light' => '#FEF3C7'],
-    'taste'     => ['primary' => '#65A30D', 'secondary' => '#3F2E18', 'accent' => '#F97316', 'dark' => '#1C1917', 'light' => '#ECFCCB'],
-    'holiday'   => ['primary' => '#166534', 'secondary' => '#991B1B', 'accent' => '#EAB308', 'dark' => '#0F172A', 'light' => '#FEF9C3'],
-    'hometown'  => ['primary' => '#1E40AF', 'secondary' => '#0F172A', 'accent' => '#94A3B8', 'dark' => '#020617', 'light' => '#E0F2FE'],
+    'fireworks' => ['primary' => '#E26C41', 'secondary' => '#19405D', 'accent' => '#F26047', 'background' => '#FFFFFF', 'dark_text' => '#1F2937', 'optional_accent' => '#FCD34D'],
+    'celebrate' => ['primary' => '#F26047', 'secondary' => '#8A5156', 'accent' => '#E26C41', 'background' => '#FEF6D5', 'dark_text' => '#000000', 'optional_accent' => '#FCD34D'],
+    'taste'     => ['primary' => '#19405D', 'secondary' => '#8A5156', 'accent' => '#E26C41', 'background' => '#FEF6D5', 'dark_text' => '#000000', 'optional_accent' => '#3B82F6'],
+    'holiday'   => ['primary' => '#8A5156', 'secondary' => '#19405D', 'accent' => '#F26047', 'background' => '#FEF6D5', 'dark_text' => '#000000', 'optional_accent' => '#FCD34D'],
+    'hometown'  => ['primary' => '#E26C41', 'secondary' => '#000000', 'accent' => '#F26047', 'background' => '#FFFFFF', 'dark_text' => '#19405D', 'optional_accent' => '#3B82F6'],
 ];
 
 if ($scheme !== 'custom' && isset($presets[$scheme])) {
@@ -43,14 +38,16 @@ if ($scheme !== 'custom' && isset($presets[$scheme])) {
     $color_primary   = $p['primary'];
     $color_secondary = $p['secondary'];
     $color_accent    = $p['accent'];
-    $color_dark      = $p['dark'];
-    $color_light     = $p['light'];
+    $color_background= $p['background'];
+    $color_dark_text = $p['dark_text'];
+    $color_optional_accent = $p['optional_accent'];
 } else {
     $color_primary   = roanoke_event_meta('color_primary', '#D97706');
     $color_secondary = roanoke_event_meta('color_secondary', '#7C2D12');
     $color_accent    = roanoke_event_meta('color_accent', '#FCD34D');
-    $color_dark      = roanoke_event_meta('color_dark', '#1F2937');
-    $color_light     = roanoke_event_meta('color_light', '#FEF3C7');
+    $color_background= roanoke_event_meta('color_background', '#FFFFFF');
+    $color_dark_text = roanoke_event_meta('color_dark_text', '#1F2937');
+    $color_optional_accent = roanoke_event_meta('color_optional_accent', '#3B82F6');
 }
 
 // ─── FIELD FETCH ───
@@ -73,10 +70,6 @@ $leave_items       = roanoke_event_meta_array('leave');
 $parking_info      = roanoke_event_meta('parking');
 $map_embed         = roanoke_event_meta('map_embed');
 $map_image_id      = roanoke_event_meta('map_image_id');
-$vendors_text      = roanoke_event_meta('vendors_text');
-$vendor_link       = roanoke_event_meta('vendor_link');
-$sponsors          = roanoke_event_meta_array('sponsors');
-$volunteer_link    = roanoke_event_meta('volunteer_link');
 $gallery_ids       = roanoke_event_meta('gallery_ids');
 $faq_items         = roanoke_event_meta_array('faq');
 $awards_text       = roanoke_event_meta('awards');
@@ -114,14 +107,20 @@ if ($gallery_ids) {
 // Awards
 $awards = [];
 if ($awards_text) {
-    foreach (preg_split('/
-|
-|
-/', $awards_text) as $line) {
+    foreach (preg_split('/\r\n|\r|\n/', $awards_text) as $line) {
         $line = trim($line);
         if ($line) $awards[] = $line;
     }
 }
+
+// Sponsors
+$sponsors = roanoke_event_meta_array('sponsors');
+$clean_sponsors = array_filter($sponsors, function($s) {
+    return !empty($s['name']);
+});
+
+// Participate cards
+$participate_cards = roanoke_event_meta_array('participate');
 ?>
 
 <style>
@@ -129,8 +128,9 @@ if ($awards_text) {
     --event-primary:   <?php echo esc_attr($color_primary); ?>;
     --event-secondary: <?php echo esc_attr($color_secondary); ?>;
     --event-accent:    <?php echo esc_attr($color_accent); ?>;
-    --event-dark:      <?php echo esc_attr($color_dark); ?>;
-    --event-light:     <?php echo esc_attr($color_light); ?>;
+    --event-background:<?php echo esc_attr($color_background); ?>;
+    --event-dark-text: <?php echo esc_attr($color_dark_text); ?>;
+    --event-optional:  <?php echo esc_attr($color_optional_accent); ?>;
     --event-white:     #FFFFFF;
 }
 
@@ -139,7 +139,7 @@ if ($awards_text) {
    ════════════════════════════════════════ */
 .event-page {
     font-family: inherit;
-    color: var(--event-dark);
+    color: var(--event-dark-text);
     overflow-x: hidden;
 }
 .event-page section { position: relative; }
@@ -206,7 +206,7 @@ if ($awards_text) {
     color: var(--event-accent);
     margin-bottom: 0.75rem;
     padding: 0.35rem 1rem;
-    background: var(--event-dark);
+    background: var(--event-dark-text);
 }
 .event-section-title {
     font-family: var(--font-headline);
@@ -228,7 +228,7 @@ if ($awards_text) {
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    background: var(--event-dark);
+    background: var(--event-dark-text);
 }
 .event-hero__media {
     position: absolute;
@@ -241,6 +241,19 @@ if ($awards_text) {
     height: 100%;
     object-fit: cover;
     opacity: 0.55;
+}
+.event-hero__media video {
+    object-fit: cover;
+    min-width: 100%;
+    min-height: 100%;
+}
+.event-hero__youtube-wrapper {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--event-dark-text);
 }
 .event-hero__overlay {
     position: absolute;
@@ -395,49 +408,112 @@ if ($awards_text) {
    QUICK INFO BAR
    ════════════════════════════════════════ */
 .event-infobar {
-    background: var(--event-primary);
+    background: transparent;
     padding: 0;
     position: relative;
     z-index: 20;
+    margin-top: -35px;
+    pointer-events: none;
+    padding-bottom: 2rem;
 }
 .event-infobar__grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     max-width: 1200px;
     margin: 0 auto;
+    padding: 0 1rem;
+    gap: 0.75rem;
+    pointer-events: none;
 }
 @media (min-width: 768px) {
-    .event-infobar__grid { grid-template-columns: repeat(4, 1fr); }
+    .event-infobar__grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        padding: 0 2rem;
+    }
 }
 .event-infobar__item {
-    padding: 1.5rem 1rem;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 2rem 1rem 1.25rem;
     text-align: center;
-    border-right: 1px solid rgba(255,255,255,0.2);
-    border-bottom: 1px solid rgba(255,255,255,0.2);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    pointer-events: auto;
+    position: relative;
+    overflow: visible;
+}
+.event-infobar__item:hover {
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid var(--event-accent);
+    box-shadow: 0 1px 15px var(--event-accent);
+}
+.event-infobar__icon-wrap {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 0.75rem;
+    margin-top: -52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--event-primary);
+    border-radius: 50%;
+    padding: 14px;
+    transition: all 0.4s ease;
+    border: 3px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    position: relative;
+    z-index: 2;
 }
 @media (min-width: 768px) {
-    .event-infobar__item { border-bottom: none; }
+    .event-infobar__icon-wrap {
+        width: 80px;
+        height: 80px;
+        margin-top: -56px;
+        padding: 16px;
+    }
 }
-.event-infobar__item:last-child { border-right: none; }
+.event-infobar__item:hover .event-infobar__icon-wrap {
+    transform: translateY(-6px) scale(1.15);
+    border-color: var(--event-accent);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2), 0 0 40px rgba(255, 215, 0, 0.15);
+}
 .event-infobar__icon {
-    width: 32px;
-    height: 32px;
-    margin: 0 auto 0.5rem;
-    color: var(--event-accent);
+    width: 100%;
+    height: 100%;
+    color: var(--event-white);
+    stroke: currentColor;
+    stroke-width: 1.5;
+    fill: none;
+    transition: all 0.4s ease;
+}
+.event-infobar__item:hover .event-infobar__icon {
+    /* color: var(--event-accent); */
+    transform: scale(1.05);
 }
 .event-infobar__label {
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.15em;
-    color: rgba(255,255,255,0.7);
-    margin-bottom: 0.15rem;
+    color: rgba(0, 0, 0, 0.4);
+    margin-bottom: 0.3rem;
+    font-family: var(--font-headline);
+    margin-top: 0.5rem;
 }
 .event-infobar__value {
     font-family: var(--font-headline);
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 700;
-    color: var(--event-white);
+    color: var(--event-dark-text);
+    line-height: 1.3;
+}
+@media (min-width: 768px) {
+    .event-infobar__value { font-size: 1.1rem; }
 }
 
 /* ════════════════════════════════════════
@@ -450,13 +526,13 @@ if ($awards_text) {
 .event-section--primary .event-section-title { color: var(--event-white); }
 .event-section--secondary { background: var(--event-secondary); color: var(--event-white); }
 .event-section--secondary .event-section-title { color: var(--event-white); }
-.event-section--light     { background: var(--event-light); color: var(--event-dark); }
-.event-section--light .event-section-title { color: var(--event-dark); }
-.event-section--dark      { background: var(--event-dark); color: var(--event-white); }
+.event-section--light     { background: var(--event-background); color: var(--event-dark-text); }
+.event-section--light .event-section-title { color: var(--event-dark-text); }
+.event-section--dark      { background: var(--event-dark-text); color: var(--event-white); }
 .event-section--dark .event-section-title { color: var(--event-white); }
-.event-section--white     { background: var(--event-white); color: var(--event-dark); }
-.event-section--accent    { background: var(--event-accent); color: var(--event-dark); }
-.event-section--accent .event-section-title { color: var(--event-dark); }
+.event-section--white     { background: var(--event-white); color: var(--event-dark-text); }
+.event-section--accent    { background: var(--event-accent); color: var(--event-dark-text); }
+.event-section--accent .event-section-title { color: var(--event-dark-text); }
 
 /* ════════════════════════════════════════
    ABOUT
@@ -504,6 +580,33 @@ if ($awards_text) {
 /* ════════════════════════════════════════
    SCHEDULE
    ════════════════════════════════════════ */
+   .event-schedule__block {
+    margin-bottom: 3rem;
+}
+
+.event-schedule__block:last-child {
+    margin-bottom: 0;
+}
+
+.event-schedule__block-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.event-schedule__block-header h3 {
+    font-family: var(--font-headline);
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin: 0;
+    color: inherit;
+}
+
+.event-schedule__location {
+    font-size: 0.95rem;
+    opacity: 0.75;
+    margin: 0;
+}
 .event-schedule__wrap { max-width: 900px; margin: 0 auto; }
 .event-schedule__item {
     display: grid;
@@ -555,7 +658,7 @@ if ($awards_text) {
 .event-rules__box { padding: 2.5rem; position: relative; }
 .event-rules__box--bring { background: var(--event-primary); color: var(--event-white); }
 .event-rules__box--leave {
-    background: var(--event-dark);
+    background: var(--event-dark-text);
     color: var(--event-white);
     border: 3px solid var(--event-accent);
 }
@@ -647,15 +750,26 @@ if ($awards_text) {
     z-index: 0;
     pointer-events: none;
 }
+.event-map__wrap iframe,
+.event-map__wrap embed,
+.event-map__wrap object,
 .event-map__frame {
     position: relative;
     z-index: 1;
     width: 100%;
-    height: 400px;
+    min-height: 400px;
     border: none;
+    display: block;
+}
+.event-map__wrap iframe[src*="google.com/maps"],
+.event-map__wrap iframe[src*="googleusercontent"],
+.event-map__wrap iframe[src*="mapbox"],
+.event-map__wrap iframe[src*="openstreetmap"] {
     filter: grayscale(30%) contrast(1.1);
 }
-.event-map__frame:hover { filter: none; }
+.event-map__wrap iframe:hover {
+    filter: none;
+}
 
 /* ════════════════════════════════════════
    PARTICIPATE CARDS
@@ -685,7 +799,12 @@ if ($awards_text) {
 }
 .event-cta-card--primary { background: var(--event-primary); color: var(--event-white); }
 .event-cta-card--secondary { background: var(--event-secondary); color: var(--event-white); }
-.event-cta-card--accent { background: var(--event-accent); color: var(--event-dark); }
+.event-cta-card--accent { background: var(--event-accent); color: var(--event-dark-text); }
+.event-cta-card--background { background: var(--event-background); color: var(--event-dark-text); }
+.event-cta-card--dark_text { background: var(--event-dark-text); color: var(--event-white); }
+.event-cta-card--optional_accent { background: var(--event-optional); color: var(--event-white); }
+.event-cta-card--white { background: var(--event-white); color: var(--event-dark-text); border: 2px solid var(--event-primary); }
+
 .event-cta-card:hover {
     transform: translateY(-6px);
     box-shadow: 0 20px 40px rgba(0,0,0,0.2);
@@ -703,6 +822,42 @@ if ($awards_text) {
     margin-bottom: 1.5rem;
     line-height: 1.6;
 }
+
+/* Button overrides for participate cards */
+.event-cta-card--dark_text .event-btn-outline {
+    border-color: var(--event-white);
+    color: var(--event-white);
+}
+.event-cta-card--dark_text .event-btn-outline:hover {
+    background: var(--event-white);
+    color: var(--event-dark-text);
+}
+.event-cta-card--background .event-btn-outline,
+.event-cta-card--white .event-btn-outline {
+    border-color: var(--event-primary);
+    color: var(--event-primary);
+}
+.event-cta-card--background .event-btn-outline:hover,
+.event-cta-card--white .event-btn-outline:hover {
+    background: var(--event-primary);
+    color: var(--event-white);
+}
+.event-cta-card--accent .event-btn-outline {
+    border-color: var(--event-dark-text);
+    color: var(--event-dark-text);
+}
+.event-cta-card--accent .event-btn-outline:hover {
+    background: var(--event-dark-text);
+    color: var(--event-white);
+}
+.event-cta-card--dark_text h3,
+.event-cta-card--dark_text p { color: var(--event-white); }
+.event-cta-card--background h3,
+.event-cta-card--background p,
+.event-cta-card--white h3,
+.event-cta-card--white p { color: var(--event-dark-text); }
+.event-cta-card--accent h3,
+.event-cta-card--accent p { color: var(--event-dark-text); }
 
 /* ════════════════════════════════════════
    GALLERY
@@ -869,6 +1024,7 @@ if ($awards_text) {
     min-width: 160px;
     height: 100px;
     transition: transform 0.3s ease, background 0.3s ease;
+    cursor: pointer;
 }
 .event-sponsor-item:hover {
     background: rgba(255,255,255,0.25);
@@ -879,7 +1035,6 @@ if ($awards_text) {
     width: auto;
     max-width: 160px;
     object-fit: contain;
-    /* filter: brightness(0) invert(1); */
     opacity: 0.95;
     pointer-events: none;
 }
@@ -896,6 +1051,146 @@ if ($awards_text) {
     0%   { transform: translateX(0); }
     100% { transform: translateX(-50%); }
 }
+
+/* ─── SPONSOR MODAL ─── */
+.event-sponsor-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    animation: eventModalFadeIn 0.3s ease;
+}
+.event-sponsor-modal-overlay.active { display: flex; }
+@keyframes eventModalFadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+.event-sponsor-modal {
+    background: var(--event-white);
+    border-radius: 20px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 2.5rem;
+    position: relative;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+    animation: eventModalSlideUp 0.3s ease;
+}
+@keyframes eventModalSlideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.event-sponsor-modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--event-dark-text);
+    cursor: pointer;
+    padding: 0.5rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    background: rgba(0, 0, 0, 0.05);
+}
+.event-sponsor-modal-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+    transform: rotate(90deg);
+}
+.event-sponsor-modal-logo {
+    max-width: 150px;
+    margin: 0 auto 1.5rem;
+    text-align: center;
+}
+.event-sponsor-modal-logo img {
+    max-width: 100%;
+    height: auto;
+    max-height: 120px;
+    object-fit: contain;
+}
+.event-sponsor-modal-name {
+    font-family: var(--font-headline);
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--event-dark-text);
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+.event-sponsor-modal-bio {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--event-dark-text);
+    opacity: 0.85;
+    margin: 1rem 0 1.5rem;
+    text-align: center;
+}
+.event-sponsor-modal-website {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+.event-sponsor-modal-website a {
+    color: var(--event-primary);
+    text-decoration: none;
+    font-weight: 600;
+    font-family: var(--font-body);
+    transition: color 0.2s ease;
+}
+.event-sponsor-modal-website a:hover {
+    color: var(--event-secondary);
+    text-decoration: underline;
+}
+.event-sponsor-modal-social {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-top: 1.5rem;
+    border-top: 2px solid rgba(0, 0, 0, 0.08);
+}
+.event-sponsor-modal-social a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 50px;
+    background: var(--event-background);
+    color: var(--event-dark-text);
+    text-decoration: none;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.25s ease;
+    border: 2px solid transparent;
+}
+.event-sponsor-modal-social a:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+.event-sponsor-modal-social a .social-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+.event-sponsor-modal-social a.facebook:hover { background: #1877F2; color: white; border-color: #1877F2; }
+.event-sponsor-modal-social a.instagram:hover { background: #E4405F; color: white; border-color: #E4405F; }
+.event-sponsor-modal-social a.tiktok:hover { background: #000000; color: white; border-color: #333; }
+.event-sponsor-modal-social a.twitter:hover { background: #000000; color: white; border-color: #000; }
+.event-sponsor-modal-social a.youtube:hover { background: #FF0000; color: white; border-color: #FF0000; }
+
 /* ════════════════════════════════════════
    ANIMATIONS & RESPONSIVE
    ════════════════════════════════════════ */
@@ -918,205 +1213,15 @@ if ($awards_text) {
     .event-rules__grid { grid-template-columns: 1fr; }
     .event-cta-grid { grid-template-columns: 1fr; }
     .event-gallery__grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-/* ════════════════════════════════════════
-   QUICK INFO BAR - ICONS OVERLAP HERO
-   ════════════════════════════════════════ */
-.event-infobar {
-    background: transparent;
-    padding: 0;
-    position: relative;
-    z-index: 20;
-    margin-top: -35px;
-    pointer-events: none;
-    padding-bottom: 2rem;
-}
-
-.event-infobar__grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 1rem;
-    gap: 0.75rem;
-    pointer-events: none;
-}
-@media (min-width: 768px) {
-    .event-infobar__grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1rem;
-        padding: 0 2rem;
-    }
-}
-
-.event-infobar__item {
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    padding: 2rem 1rem 1.25rem;
-    text-align: center;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
-    pointer-events: auto;
-    position: relative;
-    overflow: visible;
-}
-
-.event-infobar__item:hover {
-    transform: translateY(-4px);
-    background: rgba(255, 255, 255, 0.98);
-    border: 1px solid var(--event-accent);
-    box-shadow: 0 1px 15px var(--event-accent);
-}
-
-/* Only the icon wraps overlap upward */
-.event-infobar__icon-wrap {
-    width: 72px;
-    height: 72px;
-    margin: 0 auto 0.75rem;
-    margin-top: -52px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--event-primary);
-    border-radius: 50%;
-    padding: 14px;
-    transition: all 0.4s ease;
-    border: 3px solid rgba(255, 255, 255, 0.8);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-    position: relative;
-    z-index: 2;
-}
-
-@media (min-width: 768px) {
-    .event-infobar__icon-wrap {
-        width: 80px;
-        height: 80px;
-        margin-top: -56px;
-        padding: 16px;
-    }
-}
-
-.event-infobar__item:hover .event-infobar__icon-wrap {
-    transform: translateY(-6px) scale(1.15);
-    border-color: var(--event-accent);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2), 0 0 40px rgba(255, 215, 0, 0.15);
-}
-
-.event-infobar__icon {
-    width: 100%;
-    height: 100%;
-    color: var(--event-white);
-    stroke: currentColor;
-    stroke-width: 1.5;
-    fill: none;
-    transition: all 0.4s ease;
-}
-
-.event-infobar__item:hover .event-infobar__icon {
-    color: var(--event-accent);
-    transform: scale(1.05);
-}
-
-/* ─── LABEL & VALUE ─── */
-.event-infobar__label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: rgba(0, 0, 0, 0.4);
-    margin-bottom: 0.3rem;
-    font-family: var(--font-headline);
-    margin-top: 0.5rem;
-}
-
-.event-infobar__value {
-    font-family: var(--font-headline);
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--event-dark);
-    line-height: 1.3;
-}
-
-@media (min-width: 768px) {
-    .event-infobar__value {
-        font-size: 1.1rem;
-    }
-}
-/* Dark background variants */
-.event-infobar--transition-dark::after {
-    background: linear-gradient(to bottom, transparent, var(--event-dark));
-}
-
-.event-infobar--transition-primary::after {
-    background: linear-gradient(to bottom, transparent, var(--event-primary));
-}
-
-.event-infobar--transition-secondary::after {
-    background: linear-gradient(to bottom, transparent, var(--event-secondary));
-}
-
-.event-infobar--transition-light::after {
-    background: linear-gradient(to bottom, transparent, var(--event-light));
-}
-
-/* ─── RESPONSIVE ─── */
-@media (max-width: 640px) {
-    .event-infobar {
-        margin-top: -25px;
-    }
-    
-    .event-infobar__grid {
-        gap: 0.5rem;
-        padding: 0 0.75rem;
-    }
-    
-    .event-infobar__item {
-        padding: 1.5rem 0.75rem 1rem;
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.95);
-    }
-    
-    .event-infobar__icon-wrap {
-        width: 56px;
-        height: 56px;
-        margin-top: -40px;
-        padding: 10px;
-        margin-bottom: 0.5rem;
-    }
-    
-    .event-infobar__value {
-        font-size: 0.8rem;
-    }
-    
-    .event-infobar__label {
-        font-size: 0.6rem;
-        margin-top: 0.25rem;
-    }
-    
-    .event-infobar::after {
-        height: 30px;
-    }
+    .event-sponsor-modal { padding: 1.5rem; margin: 1rem; }
+    .event-sponsor-modal-social { flex-direction: column; align-items: stretch; }
+    .event-sponsor-modal-social a { justify-content: center; }
 }
 
 @media (max-width: 400px) {
-    .event-infobar {
-        margin-top: -20px;
-    }
-    
-    .event-infobar__icon-wrap {
-        width: 48px;
-        height: 48px;
-        margin-top: -34px;
-        padding: 8px;
-    }
-    
-    .event-infobar__item {
-        background: rgba(255, 255, 255, 0.98);
-    }
+    .event-infobar { margin-top: -20px; }
+    .event-infobar__icon-wrap { width: 48px; height: 48px; margin-top: -34px; padding: 8px; }
+    .event-infobar__item { background: rgba(255, 255, 255, 0.98); }
 }
 </style>
 
@@ -1128,9 +1233,43 @@ if ($awards_text) {
 <section class="event-hero">
     <div class="event-hero__media">
         <?php if ($hero_video): ?>
-            <video autoplay muted loop playsinline poster="<?php echo $hero_image_id ? esc_url(wp_get_attachment_image_url($hero_image_id, 'full')) : ''; ?>">
-                <source src="<?php echo esc_url($hero_video); ?>" type="video/mp4">
-            </video>
+            <?php 
+            // Check if it's a YouTube URL
+            $youtube_id = '';
+            if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/', $hero_video, $matches)) {
+                $youtube_id = $matches[1];
+            }
+            ?>
+            
+            <?php if ($youtube_id): ?>
+                <!-- YouTube Embed -->
+				<div class="event-hero__youtube-wrapper" style="position:absolute; inset:0; overflow:hidden;">
+					<iframe 
+						src="https://www.youtube.com/embed/<?php echo esc_attr($youtube_id); ?>?autoplay=1&mute=1&loop=1&playlist=<?php echo esc_attr($youtube_id); ?>&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1"
+						style="
+							position: absolute;
+							top: 50%;
+							left: 50%;
+							width: 100vw;
+							height: 56.25vw;
+							min-height: 100vh;
+							min-width: 177.78vh;
+							transform: translate(-50%, -50%);
+							border: 0;
+							pointer-events: none;
+						"
+						allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+						allowfullscreen
+						frameborder="0"
+					></iframe>
+				</div>
+            <?php else: ?>
+                <!-- Direct video file -->
+                <video autoplay muted loop playsinline poster="<?php echo $hero_image_id ? esc_url(wp_get_attachment_image_url($hero_image_id, 'full')) : ''; ?>">
+                    <source src="<?php echo esc_url($hero_video); ?>" type="video/mp4">
+                </video>
+            <?php endif; ?>
+            
         <?php elseif ($hero_image_id): ?>
             <img src="<?php echo esc_url(wp_get_attachment_image_url($hero_image_id, 'full')); ?>" alt="<?php echo esc_attr(get_the_title()); ?>">
         <?php else: ?>
@@ -1260,13 +1399,13 @@ if ($awards_text) {
 <section class="event-section event-section--white">
     <div class="event-about__grid event-reveal">
         <div class="event-about__image">
-            <?php if ($hero_image_id): ?>
-                <img src="<?php echo esc_url(wp_get_attachment_image_url($hero_image_id, 'large')); ?>" alt="<?php echo esc_attr(get_the_title()); ?>">
+            <?php if (has_post_thumbnail()): ?>
+                <?php echo get_the_post_thumbnail(get_the_ID(), 'large', ['alt' => esc_attr(get_the_title())]); ?>
             <?php endif; ?>
         </div>
         <div>
             <span class="event-section-label">About the Event</span>
-            <h2 class="event-section-title" style="color: var(--event-dark);">What to Expect</h2>
+            <h2 class="event-section-title" style="color: var(--event-dark-text);">What to Expect</h2>
             <div class="event-about__text event-body">
                 <?php echo wp_kses_post($long_desc); ?>
             </div>
@@ -1284,24 +1423,79 @@ if ($awards_text) {
 <?php if (!empty($schedule)): ?>
 <section class="event-section event-section--dark">
     <div class="event-reveal">
+
         <div style="text-align: center; margin-bottom: 3rem;">
             <span class="event-section-label">Plan Your Day</span>
             <h2 class="event-section-title">Event Schedule</h2>
         </div>
+
         <div class="event-schedule__wrap">
-            <?php foreach ($schedule as $item): 
-                if (empty($item['time']) && empty($item['activity'])) continue;
-            ?>
-            <div class="event-schedule__item">
-                <div class="event-schedule__time"><?php echo esc_html($item['time'] ?? ''); ?></div>
-                <div class="event-schedule__details">
-                    <h4><?php echo esc_html($item['activity'] ?? ''); ?></h4>
-                    <?php if (!empty($item['description'])): ?>
-                        <p><?php echo esc_html($item['description']); ?></p>
+
+            <?php foreach ($schedule as $block): ?>
+
+                <?php
+                $block_name = $block['name'] ?? '';
+                $timeline_items = isset($block['items']) && is_array($block['items'])
+                    ? $block['items']
+                    : [];
+
+                // Skip completely empty blocks.
+                if (empty($block_name) && empty($timeline_items)) {
+                    continue;
+                }
+                ?>
+
+                <div class="event-schedule__block">
+
+                    <?php if ($block_name): ?>
+                        <div class="event-schedule__block-header">
+                            <h3><?php echo esc_html($block_name); ?></h3>
+                        </div>
                     <?php endif; ?>
+
+                    <?php foreach ($timeline_items as $item): ?>
+
+                        <?php
+                        $time     = $item['time'] ?? '';
+                        $activity = $item['activity'] ?? '';
+                        $location = $item['location'] ?? '';
+
+                        // Skip completely empty timeline items.
+                        if (empty($time) && empty($activity) && empty($location)) {
+                            continue;
+                        }
+                        ?>
+
+                        <div class="event-schedule__item">
+
+                            <?php if ($time): ?>
+                                <div class="event-schedule__time">
+                                    <?php echo esc_html($time); ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="event-schedule__details">
+
+                                <?php if ($activity): ?>
+                                    <h4><?php echo esc_html($activity); ?></h4>
+                                <?php endif; ?>
+
+                                <?php if ($location): ?>
+                                    <p class="event-schedule__location">
+                                        <?php echo esc_html($location); ?>
+                                    </p>
+                                <?php endif; ?>
+
+                            </div>
+
+                        </div>
+
+                    <?php endforeach; ?>
+
                 </div>
-            </div>
+
             <?php endforeach; ?>
+
         </div>
     </div>
 </section>
@@ -1354,7 +1548,7 @@ if ($awards_text) {
 <section class="event-section event-section--light">
     <div class="event-reveal" style="max-width: 800px; margin: 0 auto; text-align: center;">
         <span class="event-section-label">Getting Here</span>
-        <h2 class="event-section-title" style="color: var(--event-dark);">Parking & Shuttles</h2>
+        <h2 class="event-section-title" style="color: var(--event-dark-text);">Parking</h2>
         <div class="event-body" style="font-size: 1.1rem;">
             <?php echo wp_kses_post($parking_info); ?>
         </div>
@@ -1365,18 +1559,50 @@ if ($awards_text) {
 <!-- ════════════════════════════════════════
      MAP
      ════════════════════════════════════════ -->
-<?php if ($map_embed || $map_image_id): ?>
+    <?php if ($map_embed || $map_image_id): ?>
 <section class="event-section event-section--primary" style="padding: 0;">
     <div class="event-map__wrap event-reveal">
         <?php if ($map_embed): ?>
-            <?php echo $map_embed; ?>
+            <?php
+            // Allow iframe and common map embed attributes
+            $map_allowed = wp_kses_allowed_html('post');
+            $map_allowed['iframe'] = [
+                'src'             => true,
+                'width'           => true,
+                'height'          => true,
+                'frameborder'     => true,
+                'allowfullscreen' => true,
+                'allow'           => true,
+                'style'           => true,
+                'class'           => true,
+                'id'              => true,
+                'title'           => true,
+                'loading'         => true,
+                'referrerpolicy'  => true,
+                'sandbox'         => true,
+                'scrolling'       => true,
+            ];
+            $map_allowed['script'] = [
+                'src'   => true,
+                'type'  => true,
+                'async' => true,
+                'defer' => true,
+            ];
+            $map_allowed['div'] = [
+                'style' => true,
+                'class' => true,
+                'id'    => true,
+            ];
+            echo wp_kses($map_embed, $map_allowed);
+            ?>
         <?php elseif ($map_image_id): ?>
             <img src="<?php echo esc_url(wp_get_attachment_image_url($map_image_id, 'large')); ?>" alt="Event Map" style="width:100%;height:auto;display:block;">
         <?php endif; ?>
     </div>
 </section>
-<?php endif; ?>
+    <?php endif; ?>
 
+<!-- WordPress content area -->
 <section id="content" class="py-8 bg-white">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <?php
@@ -1388,9 +1614,20 @@ if ($awards_text) {
 </section>
 
 <!-- ════════════════════════════════════════
-     VENDORS / VOLUNTEER
+     PARTICIPATE CARDS
      ════════════════════════════════════════ -->
-<?php if ($vendors_text || $volunteer_link): ?>
+<?php 
+$color_classes = [
+    'primary'          => 'event-cta-card--primary',
+    'secondary'        => 'event-cta-card--secondary',
+    'accent'           => 'event-cta-card--accent',
+    'background'       => 'event-cta-card--background',
+    'dark_text'        => 'event-cta-card--dark_text',
+    'optional_accent'  => 'event-cta-card--optional_accent',
+    'white'            => 'event-cta-card--white',
+];
+?>
+<?php if (!empty($participate_cards)): ?>
 <section class="event-section event-section--secondary">
     <div class="event-reveal">
         <div style="text-align: center; margin-bottom: 3rem;">
@@ -1398,24 +1635,20 @@ if ($awards_text) {
             <h2 class="event-section-title">Participate</h2>
         </div>
         <div class="event-cta-grid">
-            <?php if ($vendors_text): ?>
-            <div class="event-cta-card event-cta-card--primary">
-                <div style="position:absolute;top:0;left:0;width:100%;height:6px;background:var(--event-accent);"></div>
-                <h3>Vendors</h3>
-                <p><?php echo esc_html($vendors_text); ?></p>
-                <?php if ($vendor_link): ?>
-                    <a href="<?php echo esc_url($vendor_link); ?>" class="event-btn event-btn-outline" style="font-size: 0.8rem; padding: 0.6rem 1.2rem;">Apply Now</a>
+            <?php foreach ($participate_cards as $card): 
+                if (empty($card['title'])) continue;
+                $color_class = isset($color_classes[$card['color_scheme']]) ? $color_classes[$card['color_scheme']] : 'event-cta-card--primary';
+            ?>
+            <div class="event-cta-card <?php echo esc_attr($color_class); ?>">
+                <h3><?php echo esc_html($card['title']); ?></h3>
+                <?php if (!empty($card['description'])): ?>
+                    <p><?php echo esc_html($card['description']); ?></p>
+                <?php endif; ?>
+                <?php if (!empty($card['link_url']) && !empty($card['link_text'])): ?>
+                    <a href="<?php echo esc_url($card['link_url']); ?>" class="event-btn event-btn-outline" style="font-size: 0.8rem; padding: 0.6rem 1.2rem;"><?php echo esc_html($card['link_text']); ?></a>
                 <?php endif; ?>
             </div>
-            <?php endif; ?>
-            <?php if ($volunteer_link): ?>
-            <div class="event-cta-card event-cta-card--accent">
-                <div style="position:absolute;top:0;left:0;width:100%;height:6px;background:var(--event-dark);"></div>
-                <h3 style="color: var(--event-dark);">Volunteers</h3>
-                <p style="color: var(--event-dark);">Join our team and help make this event unforgettable. Great for groups and individuals!</p>
-                <a href="<?php echo esc_url($volunteer_link); ?>" class="event-btn" style="background: var(--event-dark); border-color: var(--event-dark); color: var(--event-white); font-size: 0.8rem; padding: 0.6rem 1.2rem;">Sign Up</a>
-            </div>
-            <?php endif; ?>
+            <?php endforeach; ?>
         </div>
     </div>
 </section>
@@ -1424,9 +1657,6 @@ if ($awards_text) {
 <!-- ════════════════════════════════════════
      SPONSORS
      ════════════════════════════════════════ -->
-<?php 
-$clean_sponsors = array_filter($sponsors ?? [], function($s) { return !empty($s['name']); });
-?>
 <?php if (!empty($clean_sponsors)): ?>
 <section class="event-section event-section--primary" style="padding: 4rem 0; overflow: hidden;">
     <div style="text-align: center; margin-bottom: 2.5rem; padding: 0 1.5rem;">
@@ -1436,10 +1666,11 @@ $clean_sponsors = array_filter($sponsors ?? [], function($s) { return !empty($s[
     
     <div class="event-sponsors-marquee">
         <div class="event-sponsors-track" id="sponsorTrack">
-            <?php foreach ($clean_sponsors as $sponsor): 
+            <?php foreach ($clean_sponsors as $sponsor_index => $sponsor): 
                 $sponsor_img = !empty($sponsor['image_id']) ? wp_get_attachment_image_url(intval($sponsor['image_id']), 'medium') : '';
+                $has_details = !empty($sponsor['bio']) || !empty($sponsor['link']) || !empty($sponsor['facebook']) || !empty($sponsor['instagram']) || !empty($sponsor['tiktok']) || !empty($sponsor['twitter']) || !empty($sponsor['youtube']);
             ?>
-                <div class="event-sponsor-item">
+                <div class="event-sponsor-item" data-sponsor="<?php echo esc_attr($sponsor_index); ?>" <?php echo $has_details ? 'style="cursor:pointer;"' : ''; ?>>
                     <?php if ($sponsor_img): ?>
                         <img src="<?php echo esc_url($sponsor_img); ?>" alt="<?php echo esc_attr($sponsor['name']); ?>" loading="lazy">
                     <?php else: ?>
@@ -1450,6 +1681,20 @@ $clean_sponsors = array_filter($sponsors ?? [], function($s) { return !empty($s[
         </div>
     </div>
 </section>
+
+<!-- Sponsor Modal -->
+<div class="event-sponsor-modal-overlay" id="sponsorModal">
+    <div class="event-sponsor-modal">
+        <button class="event-sponsor-modal-close" id="sponsorModalClose">&times;</button>
+        <div id="sponsorModalContent">
+            <div class="event-sponsor-modal-logo" id="modalLogo"></div>
+            <h3 class="event-sponsor-modal-name" id="modalName"></h3>
+            <div class="event-sponsor-modal-bio" id="modalBio"></div>
+            <div class="event-sponsor-modal-website" id="modalWebsite"></div>
+            <div class="event-sponsor-modal-social" id="modalSocial"></div>
+        </div>
+    </div>
+</div>
 <?php endif; ?>
 
 <!-- ════════════════════════════════════════
@@ -1460,7 +1705,7 @@ $clean_sponsors = array_filter($sponsors ?? [], function($s) { return !empty($s[
     <div class="event-reveal">
         <div style="text-align: center; margin-bottom: 2rem; padding: 0 1.5rem;">
             <span class="event-section-label" style="background: var(--event-primary); color: var(--event-white);">Memories</span>
-            <h2 class="event-section-title" style="color: var(--event-dark);">Photo Gallery</h2>
+            <h2 class="event-section-title" style="color: var(--event-dark-text);">Photo Gallery</h2>
         </div>
         <div class="event-gallery__grid">
             <?php foreach ($gallery_images as $img): ?>
@@ -1504,8 +1749,8 @@ $clean_sponsors = array_filter($sponsors ?? [], function($s) { return !empty($s[
 <?php if (!empty($awards)): ?>
 <section class="event-section event-section--accent">
     <div class="event-reveal" style="text-align: center;">
-        <span class="event-section-label" style="background: var(--event-dark); color: var(--event-white);">Recognition</span>
-        <h2 class="event-section-title" style="color: var(--event-dark); margin-bottom: 2rem;">Award Winning</h2>
+        <span class="event-section-label" style="background: var(--event-dark-text); color: var(--event-white);">Recognition</span>
+        <h2 class="event-section-title" style="color: var(--event-dark-text); margin-bottom: 2rem;">Award Winning</h2>
         <div class="event-awards__list">
             <?php foreach ($awards as $award): ?>
                 <span class="event-awards__badge"><?php echo esc_html($award); ?></span>
@@ -1522,7 +1767,7 @@ $clean_sponsors = array_filter($sponsors ?? [], function($s) { return !empty($s[
 <section class="event-section event-section--light">
     <div class="event-reveal" style="max-width: 700px; margin: 0 auto; text-align: center;">
         <span class="event-section-label">Gear Up</span>
-        <h2 class="event-section-title" style="color: var(--event-dark);">Official Merch</h2>
+        <h2 class="event-section-title" style="color: var(--event-dark-text);">Official Merch</h2>
         <p class="event-body" style="font-size: 1.1rem; margin-bottom: 2rem;"><?php echo esc_html($merch_text); ?></p>
         <?php if ($merch_link): ?>
             <a href="<?php echo esc_url($merch_link); ?>" class="event-btn">Shop Now</a>
@@ -1534,7 +1779,7 @@ $clean_sponsors = array_filter($sponsors ?? [], function($s) { return !empty($s[
 <!-- ════════════════════════════════════════
      FOOTER CTA
      ════════════════════════════════════════ -->
-<?php if ($cta_link || $volunteer_link): ?>
+<?php if ($cta_link): ?>
 <section class="event-footercta">
     <div class="event-reveal">
         <h2 class="event-footercta__title"><?php echo esc_html($cta_text); ?></h2>
@@ -1542,9 +1787,6 @@ $clean_sponsors = array_filter($sponsors ?? [], function($s) { return !empty($s[
         <div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; position: relative;">
             <?php if ($cta_link): ?>
                 <a href="<?php echo esc_url($cta_link); ?>" class="event-btn" style="background: var(--event-white); color: var(--event-primary); border-color: var(--event-white);"><?php echo esc_html($cta_text); ?></a>
-            <?php endif; ?>
-            <?php if ($volunteer_link): ?>
-                <a href="<?php echo esc_url($volunteer_link); ?>" class="event-btn event-btn-outline">Volunteer</a>
             <?php endif; ?>
         </div>
     </div>
@@ -1594,61 +1836,178 @@ $clean_sponsors = array_filter($sponsors ?? [], function($s) { return !empty($s[
         updateCountdown();
         setInterval(updateCountdown, 1000);
     }
-})();
 
-// Sponsor marquee: clone until track is wide enough, then animate
-(function() {
+    // ─── SPONSOR MARQUEE ───
     var track = document.getElementById('sponsorTrack');
-    if (!track) return;
+    if (track) {
+        var marquee = track.parentElement;
+        var originalHTML = track.innerHTML;
 
-    var marquee = track.parentElement;
-    var originalHTML = track.innerHTML;
-
-    // Clone items until track is at least 2x viewport width
-    function fillTrack() {
-        while (track.scrollWidth < marquee.offsetWidth * 2) {
-            track.innerHTML += originalHTML;
+        function fillTrack() {
+            track.innerHTML = originalHTML;
+            var attempts = 0;
+            while (track.scrollWidth < marquee.offsetWidth * 2 && attempts < 20) {
+                track.innerHTML += originalHTML;
+                attempts++;
+            }
         }
-    }
-    fillTrack();
 
-    // Recalculate on resize (in case viewport grows)
-    window.addEventListener('resize', function() {
-        // Reset and refill
-        track.innerHTML = originalHTML;
-        fillTrack();
-        setAnimationDuration();
-    });
+        function setAnimationDuration() {
+            if (track.children.length === 0) track.innerHTML = originalHTML;
+            var oneLoopWidth = track.scrollWidth / 2;
+            if (oneLoopWidth === 0 || !isFinite(oneLoopWidth)) oneLoopWidth = marquee.offsetWidth || 800;
+            var duration = Math.max(oneLoopWidth / 60, 10);
+            track.style.animation = 'none';
+            void track.offsetHeight;
+            track.style.animation = 'eventSponsorScroll ' + duration + 's linear infinite';
+        }
 
-    // Set duration so speed is constant (~60px/sec) regardless of content length
-    function setAnimationDuration() {
-        var oneLoopWidth = track.scrollWidth / 2;
-        var speed = 60; // pixels per second
-        var duration = oneLoopWidth / speed;
-        track.style.animation = 'eventSponsorScroll ' + duration + 's linear infinite';
-    }
+        function initMarquee() {
+            fillTrack();
+            setAnimationDuration();
+            attachSponsorClickEvents();
+        }
 
-    // Wait for images to load before measuring
-    if (track.querySelector('img')) {
-        var imgs = track.querySelectorAll('img');
-        var loaded = 0;
-        imgs.forEach(function(img) {
-            if (img.complete) {
+        function waitForImagesAndInit() {
+            var images = track.querySelectorAll('img');
+            if (images.length === 0) { initMarquee(); return; }
+            var loaded = 0, totalImages = images.length;
+            function checkAllLoaded() {
                 loaded++;
-            } else {
-                img.addEventListener('load', function() {
-                    loaded++;
-                    if (loaded === imgs.length) setAnimationDuration();
-                });
-                img.addEventListener('error', function() {
-                    loaded++;
-                    if (loaded === imgs.length) setAnimationDuration();
-                });
+                if (loaded === totalImages) initMarquee();
+            }
+            images.forEach(function(img) {
+                if (img.complete && img.naturalWidth > 0) checkAllLoaded();
+                else {
+                    img.addEventListener('load', checkAllLoaded);
+                    img.addEventListener('error', checkAllLoaded);
+                }
+            });
+            setTimeout(function() {
+                if (!track.style.animation || track.style.animation === 'none') initMarquee();
+            }, 3000);
+        }
+
+        var resizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                track.style.animation = 'none';
+                initMarquee();
+                setTimeout(attachSponsorClickEvents, 100);
+            }, 300);
+        });
+
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                setTimeout(function() {
+                    var computedStyle = window.getComputedStyle(track);
+                    if (computedStyle.animationName === 'none') initMarquee();
+                }, 500);
             }
         });
-        if (loaded === imgs.length) setAnimationDuration();
-    } else {
-        setAnimationDuration();
+
+        waitForImagesAndInit();
+    }
+
+    // ─── SPONSOR MODAL ───
+    var modal = document.getElementById('sponsorModal');
+    var closeBtn = document.getElementById('sponsorModalClose');
+    if (!modal || !closeBtn) return;
+
+    var modalLogo = document.getElementById('modalLogo');
+    var modalName = document.getElementById('modalName');
+    var modalBio = document.getElementById('modalBio');
+    var modalWebsite = document.getElementById('modalWebsite');
+    var modalSocial = document.getElementById('modalSocial');
+
+    var sponsorsData = <?php 
+        $sponsor_data = [];
+        foreach ($clean_sponsors as $index => $sponsor) {
+            $sponsor_data[$index] = [
+                'name' => $sponsor['name'] ?? '',
+                'logo' => !empty($sponsor['image_id']) ? wp_get_attachment_image_url(intval($sponsor['image_id']), 'medium') : '',
+                'bio' => $sponsor['bio'] ?? '',
+                'link' => $sponsor['link'] ?? '',
+                'facebook' => $sponsor['facebook'] ?? '',
+                'instagram' => $sponsor['instagram'] ?? '',
+                'tiktok' => $sponsor['tiktok'] ?? '',
+                'twitter' => $sponsor['twitter'] ?? '',
+                'youtube' => $sponsor['youtube'] ?? '',
+            ];
+        }
+        echo json_encode($sponsor_data);
+    ?>;
+
+    function openSponsorModal(index) {
+        var sponsor = sponsorsData[index];
+        if (!sponsor) return;
+        var hasDetails = sponsor.bio || sponsor.link || sponsor.facebook || sponsor.instagram || sponsor.tiktok || sponsor.twitter || sponsor.youtube;
+        if (!hasDetails) return;
+
+        modalLogo.innerHTML = sponsor.logo ? '<img src="' + sponsor.logo + '" alt="' + sponsor.name + '">' : '';
+        modalName.textContent = sponsor.name;
+        
+        if (sponsor.bio) { modalBio.textContent = sponsor.bio; modalBio.style.display = 'block'; }
+        else { modalBio.style.display = 'none'; }
+        
+        if (sponsor.link) {
+            modalWebsite.innerHTML = '<a href="' + sponsor.link + '" target="_blank" rel="noopener noreferrer">' + sponsor.link.replace(/^https?:\/\//, '') + '</a>';
+            modalWebsite.style.display = 'block';
+        } else { modalWebsite.style.display = 'none'; }
+
+        var socialHtml = '';
+        var socialLinks = [
+            { key: 'facebook', label: 'Facebook', icon: '<svg class="social-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>' },
+            { key: 'instagram', label: 'Instagram', icon: '<svg class="social-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>' },
+            { key: 'tiktok', label: 'TikTok', icon: '<svg class="social-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>' },
+            { key: 'twitter', label: 'X (Twitter)', icon: '<svg class="social-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>' },
+            { key: 'youtube', label: 'YouTube', icon: '<svg class="social-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>' },
+        ];
+        
+        var hasSocial = false;
+        socialLinks.forEach(function(link) {
+            if (sponsor[link.key]) {
+                hasSocial = true;
+                socialHtml += '<a href="' + sponsor[link.key] + '" target="_blank" rel="noopener noreferrer" class="' + link.key + '">' + link.icon + ' ' + link.label + '</a>';
+            }
+        });
+        
+        if (hasSocial) { modalSocial.innerHTML = socialHtml; modalSocial.style.display = 'flex'; }
+        else { modalSocial.style.display = 'none'; }
+
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeSponsorModal() {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    function attachSponsorClickEvents() {
+        var trackEl = document.getElementById('sponsorTrack');
+        if (!trackEl) return;
+        trackEl.removeEventListener('click', handleSponsorClick);
+        trackEl.addEventListener('click', handleSponsorClick);
+    }
+
+    function handleSponsorClick(e) {
+        var target = e.target.closest('.event-sponsor-item[data-sponsor]');
+        if (!target) return;
+        openSponsorModal(target.getAttribute('data-sponsor'));
+    }
+
+    closeBtn.addEventListener('click', closeSponsorModal);
+    modal.addEventListener('click', function(e) { if (e.target === this) closeSponsorModal(); });
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeSponsorModal(); });
+
+    attachSponsorClickEvents();
+
+    var trackObs = document.getElementById('sponsorTrack');
+    if (trackObs) {
+        var observer = new MutationObserver(function() { attachSponsorClickEvents(); });
+        observer.observe(trackObs, { childList: true, subtree: true });
     }
 })();
 </script>
