@@ -196,6 +196,26 @@ $participate_cards = roanoke_event_meta_array('participate');
 .event-btn-secondary:hover { color: var(--event-secondary); }
 
 /* ─── Section Headers ─── */
+.event-hero__youtube-wrapper {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: #000;
+}
+
+.event-hero__youtube-wrapper iframe {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 177.78vh;
+    height: 100vh;
+    min-width: 100vw;
+    min-height: 56.25vw;
+    transform: translate(-50%, -50%);
+    border: 0;
+    pointer-events: none;
+}
+
 .event-section-label {
     display: inline-block;
     font-family: var(--font-headline);
@@ -240,10 +260,10 @@ $participate_cards = roanoke_event_meta_array('participate');
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center;
     opacity: 0.55;
 }
 .event-hero__media video {
-    object-fit: cover;
     min-width: 100%;
     min-height: 100%;
 }
@@ -298,7 +318,7 @@ $participate_cards = roanoke_event_meta_array('participate');
 }
 .event-hero__title {
     font-family: var(--font-headline);
-    font-size: clamp(3rem, 7vw, 6rem);
+    font-size: clamp(2rem, 5vw, 4rem);
     font-weight: 900;
     text-transform: uppercase;
     color: var(--event-white);
@@ -580,8 +600,10 @@ $participate_cards = roanoke_event_meta_array('participate');
 /* ════════════════════════════════════════
    SCHEDULE
    ════════════════════════════════════════ */
-   .event-schedule__block {
-    margin-bottom: 3rem;
+ .event-schedule__block {
+    margin-bottom: 3.5rem;
+    padding-top: 2.5rem;
+    border-top: 3px solid var(--event-accent);
 }
 
 .event-schedule__block:last-child {
@@ -589,15 +611,30 @@ $participate_cards = roanoke_event_meta_array('participate');
 }
 
 .event-schedule__block-header {
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
+    margin: 0 auto 1.5rem;
+    padding-bottom: 1rem;
+    text-align: center;
     border-bottom: 1px solid rgba(255,255,255,0.2);
+    max-width: 760px;
+    position: relative;
+}
+.event-schedule__block-header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    width: 72px;
+    height: 3px;
+    background: var(--event-primary);
+    transform: translateX(-50%);
 }
 
 .event-schedule__block-header h3 {
     font-family: var(--font-headline);
-    font-size: 1.5rem;
+    font-size: clamp(1.5rem, 2.5vw, 2rem);
     font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
     margin: 0;
     color: inherit;
 }
@@ -607,28 +644,74 @@ $participate_cards = roanoke_event_meta_array('participate');
     opacity: 0.75;
     margin: 0;
 }
-.event-schedule__wrap { max-width: 900px; margin: 0 auto; }
+.event-schedule__wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    position: relative;
+}
+.event-schedule__wrap::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 14px;
+    width: 2px;
+    background: rgba(255,255,255,0.22);
+}
 .event-schedule__item {
     display: grid;
-    grid-template-columns: 120px 1fr;
-    gap: 1.5rem;
-    padding: 1.5rem;
-    border-left: 4px solid var(--event-accent);
-    background: rgba(255,255,255,0.05);
-    margin-bottom: 1rem;
+    grid-template-columns: minmax(220px, 0.4fr) 1fr;
+    gap: 2rem;
+    padding: 1.5rem 1.75rem 1.5rem 2.25rem;
+    border-left: 6px solid var(--event-primary);
+    border-bottom: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.06);
+    margin-bottom: 0.75rem;
+    position: relative;
     transition: all 0.2s ease;
+}
+.event-schedule__item::before {
+    content: '>';
+    position: absolute;
+    top: 50%;
+    left: -1px;
+    transform: translateY(-50%) translateX(-50%) rotate(0deg);
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: 3px solid var(--event-secondary);
+    background: var(--event-accent);
+    color: var(--event-dark-text);
+    font-family: var(--font-headline);
+    font-size: 1.3rem;
+    font-weight: 900;
+    line-height: 1;
+    border-radius: 50%;
+    z-index: 1;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .event-schedule__item:hover {
     background: rgba(255,255,255,0.1);
-    transform: translateX(8px);
+    border-left-color: var(--event-accent);
+    transform: translateX(6px);
+}
+.event-schedule__item:hover::before {
+    transform: translateY(-50%) translateX(-50%) rotate(360deg) scale(1.15);
+    background: var(--event-primary);
+    border-color: var(--event-accent);
+    box-shadow: 0 0 30px rgba(242, 96, 71, 0.4), 0 0 60px rgba(242, 96, 71, 0.2);
+    color: var(--event-white);
 }
 .event-schedule__time {
     font-family: var(--font-headline);
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 800;
     color: var(--event-accent);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    line-height: 1.25;
+    align-self: center;
 }
 .event-schedule__details h4 {
     font-family: var(--font-headline);
@@ -641,6 +724,18 @@ $participate_cards = roanoke_event_meta_array('participate');
     font-size: 0.95rem;
     opacity: 0.85;
     margin: 0;
+}
+
+/* ─── Schedule Icon Arrow Animation ─── */
+@keyframes eventArrowPulse {
+    0%, 100% { transform: translateY(-50%) translateX(-50%) rotate(0deg); }
+    50% { transform: translateY(-50%) translateX(-50%) rotate(15deg); }
+}
+.event-schedule__item::before {
+    animation: eventArrowPulse 2s ease-in-out infinite;
+}
+.event-schedule__item:hover::before {
+    animation: none;
 }
 
 /* ════════════════════════════════════════
@@ -1204,7 +1299,13 @@ $participate_cards = roanoke_event_meta_array('participate');
 @media (max-width: 640px) {
     .event-hero__dateblock { flex-direction: column; gap: 0.75rem; padding: 1rem 1.5rem; }
     .event-hero__dateinfo { border-left: none; border-top: 2px solid rgba(255,255,255,0.3); padding-left: 0; padding-top: 0.75rem; text-align: center; }
-    .event-schedule__item { grid-template-columns: 1fr; gap: 0.5rem; }
+    .event-schedule__wrap::before { left: 10px; }
+    .event-schedule__item {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        padding-left: 1.75rem;
+    }
+    .event-schedule__item::before { left: -1px; }
     .event-countdown__box { min-width: 70px; padding: 1rem; }
     .event-countdown__number { font-size: 1.75rem; }
     .event-infobar__grid { grid-template-columns: repeat(2, 1fr); }
@@ -1243,26 +1344,14 @@ $participate_cards = roanoke_event_meta_array('participate');
             
             <?php if ($youtube_id): ?>
                 <!-- YouTube Embed -->
-				<div class="event-hero__youtube-wrapper" style="position:absolute; inset:0; overflow:hidden;">
-					<iframe 
-						src="https://www.youtube.com/embed/<?php echo esc_attr($youtube_id); ?>?autoplay=1&mute=1&loop=1&playlist=<?php echo esc_attr($youtube_id); ?>&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1"
-						style="
-							position: absolute;
-							top: 50%;
-							left: 50%;
-							width: 100vw;
-							height: 56.25vw;
-							min-height: 100vh;
-							min-width: 177.78vh;
-							transform: translate(-50%, -50%);
-							border: 0;
-							pointer-events: none;
-						"
-						allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-						allowfullscreen
-						frameborder="0"
-					></iframe>
-				</div>
+				<div class="event-hero__youtube-wrapper">
+                    <iframe 
+                        src="https://www.youtube.com/embed/<?php echo esc_attr($youtube_id); ?>?autoplay=1&mute=1&loop=1&playlist=<?php echo esc_attr($youtube_id); ?>&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen
+                        frameborder="0"
+                    ></iframe>
+                </div>
             <?php else: ?>
                 <!-- Direct video file -->
                 <video autoplay muted loop playsinline poster="<?php echo $hero_image_id ? esc_url(wp_get_attachment_image_url($hero_image_id, 'full')) : ''; ?>">
@@ -1421,7 +1510,7 @@ $participate_cards = roanoke_event_meta_array('participate');
      SCHEDULE
      ════════════════════════════════════════ -->
 <?php if (!empty($schedule)): ?>
-<section class="event-section event-section--dark">
+<section class="event-section event-section--secondary">
     <div class="event-reveal">
 
         <div style="text-align: center; margin-bottom: 3rem;">

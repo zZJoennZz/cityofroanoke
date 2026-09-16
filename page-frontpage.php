@@ -1,8 +1,8 @@
 <?php
 /**
- * The template for displaying the front page
- *
- * @package Visit_Roanoke
+ * Template Name: Frontpage
+ * Description: Reusable frontpage template with customizable color scheme.
+ *              
  */
 
 get_header();
