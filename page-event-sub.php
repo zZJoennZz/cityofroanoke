@@ -19,6 +19,8 @@ $parent_url  = $parent_id ? get_permalink( $parent_id ) : home_url();
 $parent_title = $parent_id ? get_the_title( $parent_id ) : 'Home';
 ?>
 
+<main id="main-content">
+
 <!-- Small Header Banner -->
 <section class="relative h-[280px] md:h-[340px] flex items-center justify-center overflow-hidden bg-navy">
     <?php if ( has_post_thumbnail() ) : ?>
@@ -63,5 +65,7 @@ $parent_title = $parent_id ? get_the_title( $parent_id ) : 'Home';
         ?>
     </div>
 </section>
+
+ </main>
 
 <?php get_footer(); ?>

@@ -52,6 +52,7 @@ if ($scheme !== 'custom' && isset($presets[$scheme])) {
 
 // ─── FIELD FETCH ───
 $event_logo_id     = roanoke_event_meta('logo_id');
+$presenting_sponsor_id = roanoke_event_meta('presenting_sponsor_id');
 $tagline           = roanoke_event_meta('tagline', 'Mark Your Calendar!');
 $hero_image_id     = roanoke_event_meta('hero_image_id');
 $hero_video        = roanoke_event_meta('hero_video');
@@ -65,8 +66,8 @@ $event_cost        = roanoke_event_meta('cost', 'FREE');
 $countdown_target  = roanoke_event_meta('countdown');
 $long_desc         = roanoke_event_meta('long_desc');
 $schedule          = roanoke_event_meta_array('schedule');
-$bring_items       = roanoke_event_meta_array('bring');
-$leave_items       = roanoke_event_meta_array('leave');
+$bring_items       = roanoke_event_meta_array('bring') ?: [];
+$leave_items       = roanoke_event_meta_array('leave') ?: [];
 $parking_info      = roanoke_event_meta('parking');
 $map_embed         = roanoke_event_meta('map_embed');
 $map_image_id      = roanoke_event_meta('map_image_id');
@@ -133,7 +134,17 @@ $participate_cards = roanoke_event_meta_array('participate');
     --event-optional:  <?php echo esc_attr($color_optional_accent); ?>;
     --event-white:     #FFFFFF;
 }
-
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
 /* ════════════════════════════════════════
    EVENT PAGE BASE
    ════════════════════════════════════════ */
@@ -156,6 +167,41 @@ $participate_cards = roanoke_event_meta_array('participate');
     line-height: 1.7;
 }
 
+/* =========================================================
+   ACCESSIBILITY: KEYBOARD FOCUS
+   ========================================================= */
+
+.event-page :focus-visible {
+    outline: 3px solid var(--event-accent);
+    outline-offset: 4px;
+}
+
+/* Keep focus visible on dark backgrounds */
+.event-section--primary :focus-visible,
+.event-section--secondary :focus-visible,
+.event-section--dark :focus-visible,
+.event-footercta :focus-visible {
+    outline-color: #FFFFFF;
+}
+
+/* Buttons */
+.event-page .event-btn:focus-visible,
+.event-page button:focus-visible,
+.event-page a:focus-visible {
+    outline: 3px solid var(--event-accent);
+    outline-offset: 4px;
+}
+
+/* Never remove the browser focus indicator without replacing it */
+.event-page :focus {
+    outline: none;
+}
+
+.event-page :focus-visible {
+    outline: 3px solid var(--event-accent);
+    outline-offset: 4px;
+}
+
 /* ─── Buttons ─── */
 .event-btn {
     display: inline-flex;
@@ -174,13 +220,16 @@ $participate_cards = roanoke_event_meta_array('participate');
     transition: all 0.25s ease;
     text-decoration: none;
 }
-.event-btn:hover {
+.event-btn:hover,
+.event-btn:focus-visible {
     background: transparent;
     color: var(--event-primary);
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0,0,0,0.15);
 }
-.event-btn-outline {
+
+.event-btn-outline,
+.event-btn-outline:focus-visible {
     background: transparent;
     color: var(--event-white);
     border-color: var(--event-white);
@@ -295,11 +344,11 @@ $participate_cards = roanoke_event_meta_array('participate');
     z-index: 10;
     text-align: center;
     padding: 2rem;
-    max-width: 900px;
+    max-width: 1000px;
 }
 .event-hero__logo {
-    max-width: 280px;
-    margin: 0 auto 1.5rem;
+    max-width: 240px;
+    margin: 0 auto 1.25rem;
     filter: drop-shadow(0 4px 20px rgba(0,0,0,0.3));
 }
 .event-hero__logo img { width: 100%; height: auto; }
@@ -313,7 +362,7 @@ $participate_cards = roanoke_event_meta_array('participate');
     color: var(--event-accent);
     background: rgba(0,0,0,0.4);
     padding: 0.5rem 1.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.75rem;
     border-left: 4px solid var(--event-accent);
 }
 .event-hero__title {
@@ -328,26 +377,49 @@ $participate_cards = roanoke_event_meta_array('participate');
 }
 .event-hero__subtitle {
     font-family: var(--font-body);
-    font-size: clamp(1.1rem, 2vw, 1.5rem);
+    font-size: clamp(1rem, 1.8vw, 1.35rem);
     color: rgba(255,255,255,0.9);
     max-width: 600px;
-    margin: 0 auto 2rem;
+    margin: 0 auto 1.5rem;
     line-height: 1.5;
+}
+.event-hero__presenting-sponsor {
+    margin: 0 auto 1.5rem;
+    text-align: center;
+}
+.event-hero__presenting-sponsor-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-family: var(--font-headline);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.8);
+}
+.event-hero__presenting-sponsor img {
+    display: block;
+    width: auto;
+    max-width: min(220px, 70vw);
+    max-height: 64px;
+    height: auto;
+    margin: 0 auto;
+    filter: drop-shadow(0 3px 12px rgba(0,0,0,0.25));
 }
 .event-hero__dateblock {
     display: inline-flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: 1.25rem;
     background: rgba(0,0,0,0.5);
     backdrop-filter: blur(10px);
-    padding: 1rem 2.5rem;
-    margin-bottom: 2rem;
+    padding: 0.85rem 2rem;
+    margin-bottom: 0.75rem;
     border: 2px solid var(--event-accent);
 }
 .event-hero__datebox { text-align: center; line-height: 1; }
 .event-hero__datebox .day {
     font-family: var(--font-headline);
-    font-size: 3rem;
+    font-size: 2.6rem;
     font-weight: 900;
     color: var(--event-accent);
     display: block;
@@ -363,11 +435,11 @@ $participate_cards = roanoke_event_meta_array('participate');
 .event-hero__dateinfo {
     text-align: left;
     border-left: 2px solid rgba(255,255,255,0.3);
-    padding-left: 1.5rem;
+    padding-left: 1.25rem;
 }
 .event-hero__dateinfo .time {
     font-family: var(--font-headline);
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--event-white);
     display: block;
@@ -381,9 +453,9 @@ $participate_cards = roanoke_event_meta_array('participate');
 .event-hero__actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: 0.75rem;
     justify-content: center;
-    margin-top: 1rem;
+    margin-top: 0.5rem;
 }
 .event-hero__scroll {
     position: absolute;
@@ -520,7 +592,7 @@ $participate_cards = roanoke_event_meta_array('participate');
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.15em;
-    color: rgba(0, 0, 0, 0.4);
+    color: #374151;
     margin-bottom: 0.3rem;
     font-family: var(--font-headline);
     margin-top: 0.5rem;
@@ -600,38 +672,51 @@ $participate_cards = roanoke_event_meta_array('participate');
 /* ════════════════════════════════════════
    SCHEDULE
    ════════════════════════════════════════ */
- .event-schedule__block {
-    margin-bottom: 3.5rem;
-    padding-top: 2.5rem;
-    border-top: 3px solid var(--event-accent);
+
+.event-schedule__wrap {
+    max-width: 620px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.event-schedule__block {
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.04);
+    overflow: hidden;
+    position: relative;
 }
 
 .event-schedule__block:last-child {
     margin-bottom: 0;
 }
 
+/* ─── Accordion Header ─── */
+
 .event-schedule__block-header {
-    margin: 0 auto 1.5rem;
-    padding-bottom: 1rem;
-    text-align: center;
-    border-bottom: 1px solid rgba(255,255,255,0.2);
-    max-width: 760px;
+    width: 100%;
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    text-align: left;
     position: relative;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: rgba(255,255,255,0.06);
+    border: 0;
+    color: inherit;
+    transition: background 0.25s ease;
 }
-.event-schedule__block-header::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 50%;
-    width: 72px;
-    height: 3px;
-    background: var(--event-primary);
-    transform: translateX(-50%);
+
+.event-schedule__block-header:hover {
+    background: rgba(255,255,255,0.12);
 }
 
 .event-schedule__block-header h3 {
     font-family: var(--font-headline);
-    font-size: clamp(1.5rem, 2.5vw, 2rem);
+    font-size: clamp(1.25rem, 2.5vw, 1.75rem);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -639,17 +724,69 @@ $participate_cards = roanoke_event_meta_array('participate');
     color: inherit;
 }
 
-.event-schedule__location {
-    font-size: 0.95rem;
-    opacity: 0.75;
-    margin: 0;
+/* Accordion icon */
+.event-schedule__block-header::after {
+    content: '+';
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border: 2px solid var(--event-accent);
+    border-radius: 50%;
+    color: var(--event-accent);
+    font-family: var(--font-headline);
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: transform 0.3s ease, background 0.3s ease;
 }
-.event-schedule__wrap {
-    max-width: 1100px;
-    margin: 0 auto;
+
+/* Open state */
+.event-schedule__block.is-open .event-schedule__block-header {
+    background: var(--event-primary);
+}
+
+.event-schedule__block.is-open .event-schedule__block-header::after {
+    content: '−';
+    background: var(--event-accent);
+    color: var(--event-dark-text);
+    transform: rotate(180deg);
+}
+
+/* ─── Accordion Content ─── */
+
+.event-schedule__content {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.35s ease;
+}
+
+.event-schedule__block.is-open .event-schedule__content {
+    grid-template-rows: 1fr;
+}
+
+.event-schedule__content-inner {
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 1rem;
+    transition: padding 0.35s ease;
+}
+
+.event-schedule__block.is-open .event-schedule__content-inner {
+    padding: 1rem;
+}
+
+.event-schedule__heading {
+    font-size: 1.5rem;
+}
+/* ─── Timeline ─── */
+
+.event-schedule__timeline {
     position: relative;
 }
-.event-schedule__wrap::before {
+
+.event-schedule__timeline::before {
     content: '';
     position: absolute;
     top: 0;
@@ -658,54 +795,63 @@ $participate_cards = roanoke_event_meta_array('participate');
     width: 2px;
     background: rgba(255,255,255,0.22);
 }
+
 .event-schedule__item {
     display: grid;
-    grid-template-columns: minmax(220px, 0.4fr) 1fr;
-    gap: 2rem;
-    padding: 1.5rem 1.75rem 1.5rem 2.25rem;
-    border-left: 6px solid var(--event-primary);
+    grid-template-columns: minmax(150px, 0.4fr) 1fr;
+    gap: 1.25rem;
+    padding: 1.25rem 1rem 1.25rem 2.25rem;
+    border-left: 5px solid var(--event-primary);
     border-bottom: 1px solid rgba(255,255,255,0.18);
     background: rgba(255,255,255,0.06);
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.6rem;
     position: relative;
     transition: all 0.2s ease;
 }
+
+.event-schedule__item:last-child {
+    margin-bottom: 0;
+    border-bottom: 0;
+}
+
 .event-schedule__item::before {
     content: '>';
     position: absolute;
     top: 50%;
     left: -1px;
-    transform: translateY(-50%) translateX(-50%) rotate(0deg);
-    width: 40px;
-    height: 40px;
+    transform: translateY(-50%) translateX(-50%);
+    width: 34px;
+    height: 34px;
     display: grid;
     place-items: center;
-    border: 3px solid var(--event-secondary);
+    border: 2px solid var(--event-secondary);
     background: var(--event-accent);
     color: var(--event-dark-text);
     font-family: var(--font-headline);
-    font-size: 1.3rem;
+    font-size: 1.1rem;
     font-weight: 900;
     line-height: 1;
     border-radius: 50%;
     z-index: 1;
-    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: all 0.3s ease;
 }
+
 .event-schedule__item:hover {
     background: rgba(255,255,255,0.1);
     border-left-color: var(--event-accent);
-    transform: translateX(6px);
+    transform: translateX(4px);
 }
+
 .event-schedule__item:hover::before {
-    transform: translateY(-50%) translateX(-50%) rotate(360deg) scale(1.15);
+    transform: translateY(-50%) translateX(-50%) rotate(360deg) scale(1.1);
     background: var(--event-primary);
     border-color: var(--event-accent);
-    box-shadow: 0 0 30px rgba(242, 96, 71, 0.4), 0 0 60px rgba(242, 96, 71, 0.2);
     color: var(--event-white);
 }
+
 .event-schedule__time {
     font-family: var(--font-headline);
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 800;
     color: var(--event-accent);
     text-transform: uppercase;
@@ -713,29 +859,68 @@ $participate_cards = roanoke_event_meta_array('participate');
     line-height: 1.25;
     align-self: center;
 }
+
 .event-schedule__details h4 {
     font-family: var(--font-headline);
-    font-size: 1.25rem;
+    font-size: 1.15rem;
     font-weight: 700;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.3rem;
     color: inherit;
 }
+
 .event-schedule__details p {
-    font-size: 0.95rem;
-    opacity: 0.85;
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.8);
     margin: 0;
 }
 
-/* ─── Schedule Icon Arrow Animation ─── */
-@keyframes eventArrowPulse {
-    0%, 100% { transform: translateY(-50%) translateX(-50%) rotate(0deg); }
-    50% { transform: translateY(-50%) translateX(-50%) rotate(15deg); }
-}
-.event-schedule__item::before {
-    animation: eventArrowPulse 2s ease-in-out infinite;
-}
-.event-schedule__item:hover::before {
-    animation: none;
+/* ─── Mobile ─── */
+
+@media (max-width: 640px) {
+
+    .event-schedule__wrap {
+        max-width: 100%;
+    }
+
+    .event-schedule__block-header {
+        padding: 1rem 1.1rem;
+    }
+
+    .event-schedule__block-header h3 {
+        font-size: 1.2rem;
+    }
+
+    .event-schedule__block-header::after {
+        width: 28px;
+        height: 28px;
+        font-size: 1.15rem;
+    }
+
+    .event-schedule__content-inner {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .event-schedule__block.is-open .event-schedule__content-inner {
+        padding: 0.75rem;
+    }
+
+    .event-schedule__timeline::before {
+        left: 10px;
+    }
+
+    .event-schedule__item {
+        grid-template-columns: 1fr;
+        gap: 0.4rem;
+        padding: 1rem 0.75rem 1rem 1.75rem;
+    }
+
+    .event-schedule__item::before {
+        left: -1px;
+        width: 30px;
+        height: 30px;
+        font-size: 1rem;
+    }
 }
 
 /* ════════════════════════════════════════
@@ -797,18 +982,18 @@ $participate_cards = roanoke_event_meta_array('participate');
     justify-content: center;
     gap: 1rem;
     flex-wrap: wrap;
-    margin-top: 2rem;
+    margin-top: 1.5rem;
 }
 .event-countdown__box {
     background: rgba(0,0,0,0.4);
     border: 2px solid var(--event-accent);
-    padding: 1.25rem 1.5rem;
+    padding: 0.8rem 1rem;
     text-align: center;
-    min-width: 90px;
+    min-width: 74px;
 }
 .event-countdown__number {
     font-family: var(--font-headline);
-    font-size: 2.5rem;
+    font-size: 1.9rem;
     font-weight: 900;
     color: var(--event-accent);
     line-height: 1;
@@ -958,50 +1143,28 @@ $participate_cards = roanoke_event_meta_array('participate');
    GALLERY
    ════════════════════════════════════════ */
 .event-gallery__grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
+    columns: 2;
+    column-gap: 0.75rem;
     max-width: 1200px;
     margin: 0 auto;
 }
 @media (min-width: 768px) {
-    .event-gallery__grid { grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+    .event-gallery__grid { columns: 3; }
 }
 .event-gallery__item {
     position: relative;
     overflow: hidden;
-    aspect-ratio: 1;
-    cursor: pointer;
-}
-.event-gallery__item:nth-child(3n+1) {
-    grid-row: span 2;
-    grid-column: span 2;
+    break-inside: avoid;
+    margin-bottom: 0.75rem;
+    border-radius: 0.35rem;
 }
 .event-gallery__item img {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: auto;
+    display: block;
     transition: transform 0.5s ease;
 }
-.event-gallery__item:hover img { transform: scale(1.08); }
-.event-gallery__overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, var(--event-primary), transparent);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    display: flex;
-    align-items: flex-end;
-    padding: 1.5rem;
-}
-.event-gallery__item:hover .event-gallery__overlay { opacity: 0.85; }
-.event-gallery__caption {
-    font-family: var(--font-headline);
-    font-weight: 700;
-    color: var(--event-white);
-    font-size: 1.1rem;
-    text-transform: uppercase;
-}
+.event-gallery__item:hover img { transform: scale(1.03); }
 
 /* ════════════════════════════════════════
    FAQ
@@ -1105,10 +1268,18 @@ $participate_cards = roanoke_event_meta_array('participate');
     width: max-content;
     will-change: transform;
 }
-.event-sponsors-marquee:hover .event-sponsors-track {
+.event-sponsors-marquee:hover .event-sponsors-track,
+.event-sponsors-marquee:focus-within .event-sponsors-track {
     animation-play-state: paused !important;
 }
+.event-sponsor-modal-overlay[hidden] {
+    display: none !important;
+}
+
 .event-sponsor-item {
+    appearance: none;
+    font: inherit;
+    color: inherit;
     flex: 0 0 auto;
     display: flex;
     align-items: center;
@@ -1142,9 +1313,174 @@ $participate_cards = roanoke_event_meta_array('participate');
     color: var(--event-white);
     white-space: nowrap;
 }
+/* ════════════════════════════════════════
+   SPONSOR MARQUEE CONTROLS
+   ════════════════════════════════════════ */
+.event-sponsors-controls {
+    display: flex;
+    justify-content: center;
+    padding: 0 1.5rem;
+    margin-bottom: 1.75rem;
+}
+
+.event-sponsors-toggle {
+    /* Reset */
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    background: none;
+    font: inherit;
+
+    /* Layout */
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 1.4rem;
+    cursor: pointer;
+
+    /* Typography */
+    font-family: var(--font-headline, 'futura-pt', 'Futura', sans-serif);
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    line-height: 1;
+
+    /* Theme */
+    color: var(--event-white);
+    background: rgba(0, 0, 0, 0.28);
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    border-radius: 999px;
+
+    /* Motion */
+    transition:
+        background-color 0.25s ease,
+        border-color 0.25s ease,
+        color 0.25s ease,
+        transform 0.2s ease,
+        box-shadow 0.25s ease;
+}
+
+/* Icon (drawn with pseudo-elements so no extra markup is needed) */
+.event-sponsors-toggle::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 12px;
+    flex-shrink: 0;
+    background-color: currentColor;
+
+    /* Default = "pause" icon (two bars) */
+    clip-path: polygon(
+        0 0,
+        33% 0,
+        33% 0,       /* stop at inner top-left of gap */
+        67% 0,
+        67% 0,
+        100% 0,
+        100% 100%,
+        67% 100%,
+        67% 100%,
+        33% 100%,
+        33% 100%,
+        0 100%
+    );
+    transition: clip-path 0.25s ease;
+}
+
+/* When paused, show a "play" triangle instead */
+.event-sponsors-toggle[aria-pressed="true"]::before {
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+/* Hover (pointer devices only) */
+@media (hover: hover) and (pointer: fine) {
+    .event-sponsors-toggle:hover {
+        background: rgba(0, 0, 0, 0.45);
+        border-color: var(--event-white);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+    }
+}
+
+/* Active */
+.event-sponsors-toggle:active {
+    transform: translateY(0);
+}
+
+/* Keyboard focus — always visible, high contrast */
+.event-sponsors-toggle:focus-visible {
+    outline: 3px solid var(--event-accent);
+    outline-offset: 3px;
+    background: rgba(0, 0, 0, 0.45);
+    border-color: var(--event-accent);
+}
+
+/* Fallback for browsers without :focus-visible support */
+.event-sponsors-toggle:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .event-sponsors-toggle,
+    .event-sponsors-toggle::before {
+        transition: none !important;
+    }
+
+    .event-sponsors-toggle:hover {
+        transform: none;
+    }
+}
+
+/* Small screens */
+@media (max-width: 480px) {
+    .event-sponsors-toggle {
+        font-size: 0.7rem;
+        padding: 0.65rem 1.15rem;
+        letter-spacing: 0.1em;
+    }
+}
 @keyframes eventSponsorScroll {
     0%   { transform: translateX(0); }
     100% { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .event-sponsors-track {
+        animation: none !important;
+        transform: none !important;
+    }
+
+    .event-hero__scroll,
+    .event-hero__scroll span::before {
+        animation: none !important;
+    }
+
+    .event-reveal {
+        opacity: 1;
+        transform: none;
+    }
+
+    .js-enabled .event-reveal {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    .js-enabled .event-reveal.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* ─── SPONSOR MODAL ─── */
@@ -1306,14 +1642,14 @@ $participate_cards = roanoke_event_meta_array('participate');
         padding-left: 1.75rem;
     }
     .event-schedule__item::before { left: -1px; }
-    .event-countdown__box { min-width: 70px; padding: 1rem; }
-    .event-countdown__number { font-size: 1.75rem; }
+    .event-countdown__box { min-width: 64px; padding: 0.75rem; }
+    .event-countdown__number { font-size: 1.5rem; }
     .event-infobar__grid { grid-template-columns: repeat(2, 1fr); }
     .event-infobar__item:nth-child(2) { border-right: none; }
     .event-infobar__item:nth-child(1), .event-infobar__item:nth-child(2) { border-bottom: 1px solid rgba(255,255,255,0.15); }
     .event-rules__grid { grid-template-columns: 1fr; }
     .event-cta-grid { grid-template-columns: 1fr; }
-    .event-gallery__grid { grid-template-columns: repeat(2, 1fr); }
+    .event-gallery__grid { columns: 2; }
     .event-sponsor-modal { padding: 1.5rem; margin: 1rem; }
     .event-sponsor-modal-social { flex-direction: column; align-items: stretch; }
     .event-sponsor-modal-social a { justify-content: center; }
@@ -1324,9 +1660,56 @@ $participate_cards = roanoke_event_meta_array('participate');
     .event-infobar__icon-wrap { width: 48px; height: 48px; margin-top: -34px; padding: 8px; }
     .event-infobar__item { background: rgba(255, 255, 255, 0.98); }
 }
+
+@media (prefers-reduced-motion: reduce) {
+
+    .event-hero__media video,
+    .event-hero__youtube-wrapper iframe {
+        display: none;
+    }
+
+    .event-hero__media {
+        background: var(--event-dark-text);
+    }
+}
+
+/* =========================================================
+   ACCESSIBILITY: REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    html {
+        scroll-behavior: auto !important;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .event-reveal {
+        opacity: 1 !important;
+        transform: none !important;
+    }
+
+    .event-sponsors-track {
+        animation: none !important;
+        transform: none !important;
+    }
+
+    .event-hero__scroll,
+    .event-hero__scroll span::before {
+        animation: none !important;
+    }
+}
 </style>
 
-<main class="event-page">
+<main id="main-content" class="event-page">
 
 <!-- ════════════════════════════════════════
      HERO
@@ -1350,11 +1733,12 @@ $participate_cards = roanoke_event_meta_array('participate');
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowfullscreen
                         frameborder="0"
+                        title="A short video background for the hero section"
                     ></iframe>
                 </div>
             <?php else: ?>
                 <!-- Direct video file -->
-                <video autoplay muted loop playsinline poster="<?php echo $hero_image_id ? esc_url(wp_get_attachment_image_url($hero_image_id, 'full')) : ''; ?>">
+                <video autoplay muted loop playsinline aria-hidden="true" poster="<?php echo $hero_image_id ? esc_url(wp_get_attachment_image_url($hero_image_id, 'full')) : ''; ?>">
                     <source src="<?php echo esc_url($hero_video); ?>" type="video/mp4">
                 </video>
             <?php endif; ?>
@@ -1369,6 +1753,13 @@ $participate_cards = roanoke_event_meta_array('participate');
     <div class="event-hero__pattern"></div>
 
     <div class="event-hero__content">
+        <?php if ($presenting_sponsor_id): ?>
+            <div class="event-hero__presenting-sponsor">
+                <span class="event-hero__presenting-sponsor-label">Presenting Sponsor</span>
+                <?php echo wp_get_attachment_image($presenting_sponsor_id, 'medium', false, ['alt' => 'Presenting Sponsor']); ?>
+            </div>
+        <?php endif; ?>
+
         <?php if ($event_logo_id): ?>
             <div class="event-hero__logo">
                 <?php echo wp_get_attachment_image($event_logo_id, 'medium', false, ['alt' => get_the_title()]); ?>
@@ -1405,16 +1796,21 @@ $participate_cards = roanoke_event_meta_array('participate');
         </div>
 
         <?php if ($countdown_target): ?>
-        <div class="event-countdown" data-target="<?php echo esc_attr($countdown_target); ?>">
-            <div class="event-countdown__box"><span class="event-countdown__number" data-unit="days">00</span><span class="event-countdown__label">Days</span></div>
-            <div class="event-countdown__box"><span class="event-countdown__number" data-unit="hours">00</span><span class="event-countdown__label">Hours</span></div>
-            <div class="event-countdown__box"><span class="event-countdown__number" data-unit="minutes">00</span><span class="event-countdown__label">Minutes</span></div>
-            <div class="event-countdown__box"><span class="event-countdown__number" data-unit="seconds">00</span><span class="event-countdown__label">Seconds</span></div>
+        <div class="event-countdown" data-target="<?php echo esc_attr($countdown_target); ?>" aria-label="Countdown until the event">
+            <span
+                class="sr-only"
+                id="event-countdown-status"
+                aria-live="polite"
+            ></span>
+            <div class="event-countdown__box" aria-hidden="true"><span class="event-countdown__number" data-unit="days">00</span><span class="event-countdown__label">Days</span></div>
+            <div class="event-countdown__box" aria-hidden="true"><span class="event-countdown__number" data-unit="hours">00</span><span class="event-countdown__label">Hours</span></div>
+            <div class="event-countdown__box" aria-hidden="true"><span class="event-countdown__number" data-unit="minutes">00</span><span class="event-countdown__label">Minutes</span></div>
+            <div class="event-countdown__box" aria-hidden="true"><span class="event-countdown__number" data-unit="seconds">00</span><span class="event-countdown__label">Seconds</span></div>
         </div>
         <?php endif; ?>
     </div>
 
-    <div class="event-hero__scroll"><span></span></div>
+    <div class="event-hero__scroll" aria-hidden="true"><span></span></div>
 </section>
 
 <?php if ($event_date_raw || $event_time || $event_location || $event_cost): ?>
@@ -1443,7 +1839,7 @@ $participate_cards = roanoke_event_meta_array('participate');
         <?php if ($event_time): ?>
         <div class="event-infobar__item">
             <div class="event-infobar__icon-wrap">
-                <svg class="event-infobar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <svg class="event-infobar__icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="10"></circle>
                     <polyline points="12 6 12 12 16 14"></polyline>
                 </svg>
@@ -1506,9 +1902,6 @@ $participate_cards = roanoke_event_meta_array('participate');
 </section>
 <?php endif; ?>
 
-<!-- ════════════════════════════════════════
-     SCHEDULE
-     ════════════════════════════════════════ -->
 <?php if (!empty($schedule)): ?>
 <section class="event-section event-section--secondary">
     <div class="event-reveal">
@@ -1519,6 +1912,10 @@ $participate_cards = roanoke_event_meta_array('participate');
         </div>
 
         <div class="event-schedule__wrap">
+
+            <?php
+            $schedule_block_index = 0;
+            ?>
 
             <?php foreach ($schedule as $block): ?>
 
@@ -1532,64 +1929,105 @@ $participate_cards = roanoke_event_meta_array('participate');
                 if (empty($block_name) && empty($timeline_items)) {
                     continue;
                 }
+
+                $schedule_block_index++;
+
+                // First valid section is open by default.
+                // $is_open = ($schedule_block_index === 1);
+                $is_open = false;
                 ?>
 
-                <div class="event-schedule__block">
+                <?php
+                $schedule_panel_id = 'event-schedule-panel-' . $schedule_block_index;
+                $schedule_button_id = 'event-schedule-button-' . $schedule_block_index;
+                ?>
+
+                <div class="event-schedule__block <?php echo $is_open ? 'is-open' : ''; ?>">
 
                     <?php if ($block_name): ?>
-                        <div class="event-schedule__block-header">
-                            <h3><?php echo esc_html($block_name); ?></h3>
-                        </div>
+
+                        <h3 class="event-schedule__heading">
+                            <button
+                                type="button"
+                                id="<?php echo esc_attr($schedule_button_id); ?>"
+                                class="event-schedule__block-header"
+                                aria-expanded="<?php echo $is_open ? 'true' : 'false'; ?>"
+                                aria-controls="<?php echo esc_attr($schedule_panel_id); ?>"
+                            >
+                                <span><?php echo esc_html($block_name); ?></span>
+                            </button>
+                        </h3>
+
                     <?php endif; ?>
 
-                    <?php foreach ($timeline_items as $item): ?>
+                    <div
+                        id="<?php echo esc_attr($schedule_panel_id); ?>"
+                        class="event-schedule__content"
+                        role="region"
+                        aria-labelledby="<?php echo esc_attr($schedule_button_id); ?>"
+                        <?php echo !$is_open ? 'hidden' : ''; ?>
+                    >
+                        <div class="event-schedule__content-inner">
 
-                        <?php
-                        $time     = $item['time'] ?? '';
-                        $activity = $item['activity'] ?? '';
-                        $location = $item['location'] ?? '';
+                            <div class="event-schedule__timeline">
 
-                        // Skip completely empty timeline items.
-                        if (empty($time) && empty($activity) && empty($location)) {
-                            continue;
-                        }
-                        ?>
+                                <?php foreach ($timeline_items as $item): ?>
 
-                        <div class="event-schedule__item">
+                                    <?php
+                                    $time     = $item['time'] ?? '';
+                                    $activity = $item['activity'] ?? '';
+                                    $location = $item['location'] ?? '';
 
-                            <?php if ($time): ?>
-                                <div class="event-schedule__time">
-                                    <?php echo esc_html($time); ?>
-                                </div>
-                            <?php endif; ?>
+                                    // Skip completely empty timeline items.
+                                    if (empty($time) && empty($activity) && empty($location)) {
+                                        continue;
+                                    }
+                                    ?>
 
-                            <div class="event-schedule__details">
+                                    <div class="event-schedule__item">
 
-                                <?php if ($activity): ?>
-                                    <h4><?php echo esc_html($activity); ?></h4>
-                                <?php endif; ?>
+                                        <?php if ($time): ?>
+                                            <div class="event-schedule__time">
+                                                <?php echo esc_html($time); ?>
+                                            </div>
+                                        <?php endif; ?>
 
-                                <?php if ($location): ?>
-                                    <p class="event-schedule__location">
-                                        <?php echo esc_html($location); ?>
-                                    </p>
-                                <?php endif; ?>
+                                        <div class="event-schedule__details">
+
+                                            <?php if ($activity): ?>
+                                                <h3>
+                                                    <?php echo esc_html($activity); ?>
+                                                </h3>
+                                            <?php endif; ?>
+
+                                            <?php if ($location): ?>
+                                                <p class="event-schedule__location">
+                                                    <?php echo esc_html($location); ?>
+                                                </p>
+                                            <?php endif; ?>
+
+                                        </div>
+
+                                    </div>
+
+                                <?php endforeach; ?>
 
                             </div>
 
                         </div>
-
-                    <?php endforeach; ?>
+                    </div>
 
                 </div>
 
             <?php endforeach; ?>
 
         </div>
+
     </div>
 </section>
 <?php endif; ?>
 
+<?php /*
 <!-- ════════════════════════════════════════
      BRING / LEAVE
      ════════════════════════════════════════ -->
@@ -1599,7 +2037,7 @@ $participate_cards = roanoke_event_meta_array('participate');
         <?php if (!empty($bring_items)): ?>
         <div class="event-rules__box event-rules__box--bring">
             <h3>
-                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <svg class="icon" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                 Bring
             </h3>
             <ul>
@@ -1629,6 +2067,7 @@ $participate_cards = roanoke_event_meta_array('participate');
     </div>
 </section>
 <?php endif; ?>
+*/ ?>
 
 <!-- ════════════════════════════════════════
      PARKING
@@ -1646,11 +2085,11 @@ $participate_cards = roanoke_event_meta_array('participate');
 <?php endif; ?>
 
 <!-- ════════════════════════════════════════
-     MAP
-     ════════════════════════════════════════ -->
-    <?php if ($map_embed || $map_image_id): ?>
+    MAP
+    ════════════════════════════════════════ -->
+<?php if ($map_embed || $map_image_id): ?>
 <section class="event-section event-section--primary" style="padding: 0;">
-    <div class="event-map__wrap event-reveal">
+    <div class="event-map__wrap event-reveal" aria-label="Event location map">
         <?php if ($map_embed): ?>
             <?php
             // Allow iframe and common map embed attributes
@@ -1689,7 +2128,7 @@ $participate_cards = roanoke_event_meta_array('participate');
         <?php endif; ?>
     </div>
 </section>
-    <?php endif; ?>
+<?php endif; ?>
 
 <!-- WordPress content area -->
 <section id="content" class="py-8 bg-white">
@@ -1705,7 +2144,7 @@ $participate_cards = roanoke_event_meta_array('participate');
 <!-- ════════════════════════════════════════
      PARTICIPATE CARDS
      ════════════════════════════════════════ -->
-<?php 
+<!-- <?php 
 $color_classes = [
     'primary'          => 'event-cta-card--primary',
     'secondary'        => 'event-cta-card--secondary',
@@ -1741,7 +2180,7 @@ $color_classes = [
         </div>
     </div>
 </section>
-<?php endif; ?>
+<?php endif; ?> -->
 
 <!-- ════════════════════════════════════════
      SPONSORS
@@ -1752,39 +2191,115 @@ $color_classes = [
         <span class="event-section-label">Partners</span>
         <h2 class="event-section-title">Our Sponsors</h2>
     </div>
-    
-    <div class="event-sponsors-marquee">
-        <div class="event-sponsors-track" id="sponsorTrack">
-            <?php foreach ($clean_sponsors as $sponsor_index => $sponsor): 
-                $sponsor_img = !empty($sponsor['image_id']) ? wp_get_attachment_image_url(intval($sponsor['image_id']), 'medium') : '';
-                $has_details = !empty($sponsor['bio']) || !empty($sponsor['link']) || !empty($sponsor['facebook']) || !empty($sponsor['instagram']) || !empty($sponsor['tiktok']) || !empty($sponsor['twitter']) || !empty($sponsor['youtube']);
-            ?>
-                <div class="event-sponsor-item" data-sponsor="<?php echo esc_attr($sponsor_index); ?>" <?php echo $has_details ? 'style="cursor:pointer;"' : ''; ?>>
-                    <?php if ($sponsor_img): ?>
-                        <img src="<?php echo esc_url($sponsor_img); ?>" alt="<?php echo esc_attr($sponsor['name']); ?>" loading="lazy">
-                    <?php else: ?>
-                        <span class="event-sponsor-name"><?php echo esc_html($sponsor['name']); ?></span>
-                    <?php endif; ?>
-                </div>
-            <?php endforeach; ?>
-        </div>
+    <div class="event-sponsors-controls">
+        <button
+            type="button"
+            id="sponsorMarqueeToggle"
+            class="event-sponsors-toggle"
+            aria-pressed="false"
+        >
+            Pause sponsor animation
+        </button>
     </div>
-</section>
+    <div class="event-sponsors-marquee">
+    <div class="event-sponsors-track" id="sponsorTrack">
 
-<!-- Sponsor Modal -->
-<div class="event-sponsor-modal-overlay" id="sponsorModal">
-    <div class="event-sponsor-modal">
-        <button class="event-sponsor-modal-close" id="sponsorModalClose">&times;</button>
-        <div id="sponsorModalContent">
-            <div class="event-sponsor-modal-logo" id="modalLogo"></div>
-            <h3 class="event-sponsor-modal-name" id="modalName"></h3>
-            <div class="event-sponsor-modal-bio" id="modalBio"></div>
-            <div class="event-sponsor-modal-website" id="modalWebsite"></div>
-            <div class="event-sponsor-modal-social" id="modalSocial"></div>
-        </div>
+        <?php foreach ($clean_sponsors as $sponsor_index => $sponsor):
+
+            $sponsor_img = !empty($sponsor['image_id'])
+                ? wp_get_attachment_image_url(
+                    intval($sponsor['image_id']),
+                    'medium'
+                )
+                : '';
+
+        ?>
+
+            <button
+                type="button"
+                class="event-sponsor-item"
+                data-sponsor="<?php echo esc_attr($sponsor_index); ?>"
+                aria-label="View information about <?php echo esc_attr($sponsor['name']); ?>"
+            >
+
+                <?php if ($sponsor_img): ?>
+
+                    <img
+                        src="<?php echo esc_url($sponsor_img); ?>"
+                        alt="<?php echo esc_attr($sponsor['name']); ?>"
+                        loading="lazy"
+                    >
+
+                <?php else: ?>
+
+                    <span class="event-sponsor-name">
+                        <?php echo esc_html($sponsor['name']); ?>
+                    </span>
+
+                <?php endif; ?>
+
+            </button>
+
+        <?php endforeach; ?>
+
     </div>
 </div>
+
 <?php endif; ?>
+</section>
+
+<div
+    class="event-sponsor-modal-overlay"
+    id="sponsorModal"
+    role="presentation"
+>
+    <div
+        class="event-sponsor-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modalName"
+    >
+
+        <button
+            type="button"
+            class="event-sponsor-modal-close"
+            id="sponsorModalClose"
+            aria-label="Close sponsor information"
+        >
+            <span aria-hidden="true">&times;</span>
+        </button>
+
+        <div id="sponsorModalContent">
+
+            <div
+                class="event-sponsor-modal-logo"
+                id="modalLogo"
+            ></div>
+
+            <h3
+                class="event-sponsor-modal-name"
+                id="modalName"
+            ></h3>
+
+            <div
+                class="event-sponsor-modal-bio"
+                id="modalBio"
+            ></div>
+
+            <div
+                class="event-sponsor-modal-website"
+                id="modalWebsite"
+            ></div>
+
+            <div
+                class="event-sponsor-modal-social"
+                id="modalSocial"
+            ></div>
+
+        </div>
+
+    </div>
+</div>
 
 <!-- ════════════════════════════════════════
      GALLERY
@@ -1800,9 +2315,6 @@ $color_classes = [
             <?php foreach ($gallery_images as $img): ?>
             <div class="event-gallery__item">
                 <img src="<?php echo esc_url($img['url']); ?>" alt="<?php echo esc_attr($img['alt'] ?: 'Event photo'); ?>" loading="lazy">
-                <div class="event-gallery__overlay">
-                    <span class="event-gallery__caption"><?php echo esc_html($img['caption'] ?: 'View'); ?></span>
-                </div>
             </div>
             <?php endforeach; ?>
         </div>
@@ -1881,223 +2393,1128 @@ $color_classes = [
     </div>
 </section>
 <?php endif; ?>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
 
+    const scheduleBlocks = document.querySelectorAll(
+        '.event-schedule__block'
+    );
+
+    scheduleBlocks.forEach(function (block) {
+
+        const header = block.querySelector(
+            '.event-schedule__block-header'
+        );
+
+        const content = block.querySelector(
+            '.event-schedule__content'
+        );
+
+        if (!header || !content) return;
+
+        header.addEventListener('click', function () {
+
+            const isOpen = header.getAttribute('aria-expanded') === 'true';
+
+            header.setAttribute(
+                'aria-expanded',
+                isOpen ? 'false' : 'true'
+            );
+
+            block.classList.toggle(
+                'is-open',
+                !isOpen
+            );
+
+            content.hidden = isOpen;
+
+        });
+
+    });
+
+});
+</script>
 </main><!-- /.event-page -->
 
 <script>
-(function() {
+(function () {
     'use strict';
 
-    // Scroll reveal
-    var reveals = document.querySelectorAll('.event-reveal');
-    if ('IntersectionObserver' in window) {
-        var observer = new IntersectionObserver(function(entries) {
-            entries.forEach(function(entry) {
-                if (entry.isIntersecting) entry.target.classList.add('visible');
-            });
-        }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-        reveals.forEach(function(el) { observer.observe(el); });
-    } else {
-        reveals.forEach(function(el) { el.classList.add('visible'); });
+    function sizeHeroVideos() {
+        var heroWrappers = document.querySelectorAll('.event-hero__youtube-wrapper');
+        var videoRatio = 16 / 9;
+
+        heroWrappers.forEach(function (wrapper) {
+            var iframe = wrapper.querySelector('iframe');
+            if (!iframe) {
+                return;
+            }
+
+            var wrapperWidth = wrapper.clientWidth;
+            var wrapperHeight = wrapper.clientHeight;
+            var wrapperRatio = wrapperWidth / wrapperHeight;
+
+            if (wrapperRatio > videoRatio) {
+                iframe.style.width = wrapperWidth + 'px';
+                iframe.style.height = (wrapperWidth / videoRatio) + 'px';
+            } else {
+                iframe.style.width = (wrapperHeight * videoRatio) + 'px';
+                iframe.style.height = wrapperHeight + 'px';
+            }
+        });
     }
 
-    // Countdown timer
-    var countdown = document.querySelector('.event-countdown');
-    if (countdown) {
-        var target = new Date(countdown.dataset.target).getTime();
-        var units = countdown.querySelectorAll('.event-countdown__number');
-        function updateCountdown() {
-            var now = new Date().getTime();
-            var diff = target - now;
-            if (diff < 0) diff = 0;
-            var d = Math.floor(diff / (1000 * 60 * 60 * 24));
-            var h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            var m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            var s = Math.floor((diff % (1000 * 60)) / 1000);
-            units.forEach(function(u) {
-                var unit = u.dataset.unit;
-                if (unit === 'days') u.textContent = String(d).padStart(2, '0');
-                if (unit === 'hours') u.textContent = String(h).padStart(2, '0');
-                if (unit === 'minutes') u.textContent = String(m).padStart(2, '0');
-                if (unit === 'seconds') u.textContent = String(s).padStart(2, '0');
+    document.addEventListener('DOMContentLoaded', function () {
+
+        sizeHeroVideos();
+
+        if ('ResizeObserver' in window) {
+            var heroResizeObserver = new ResizeObserver(sizeHeroVideos);
+            document.querySelectorAll('.event-hero__youtube-wrapper').forEach(function (wrapper) {
+                heroResizeObserver.observe(wrapper);
             });
-        }
-        updateCountdown();
-        setInterval(updateCountdown, 1000);
-    }
-
-    // ─── SPONSOR MARQUEE ───
-    var track = document.getElementById('sponsorTrack');
-    if (track) {
-        var marquee = track.parentElement;
-        var originalHTML = track.innerHTML;
-
-        function fillTrack() {
-            track.innerHTML = originalHTML;
-            var attempts = 0;
-            while (track.scrollWidth < marquee.offsetWidth * 2 && attempts < 20) {
-                track.innerHTML += originalHTML;
-                attempts++;
-            }
+        } else {
+            window.addEventListener('resize', sizeHeroVideos);
         }
 
-        function setAnimationDuration() {
-            if (track.children.length === 0) track.innerHTML = originalHTML;
-            var oneLoopWidth = track.scrollWidth / 2;
-            if (oneLoopWidth === 0 || !isFinite(oneLoopWidth)) oneLoopWidth = marquee.offsetWidth || 800;
-            var duration = Math.max(oneLoopWidth / 60, 10);
-            track.style.animation = 'none';
-            void track.offsetHeight;
-            track.style.animation = 'eventSponsorScroll ' + duration + 's linear infinite';
-        }
+        /* =========================================================
+           SCROLL REVEAL
+        ========================================================== */
 
-        function initMarquee() {
-            fillTrack();
-            setAnimationDuration();
-            attachSponsorClickEvents();
-        }
+        var reveals = document.querySelectorAll('.event-reveal');
 
-        function waitForImagesAndInit() {
-            var images = track.querySelectorAll('img');
-            if (images.length === 0) { initMarquee(); return; }
-            var loaded = 0, totalImages = images.length;
-            function checkAllLoaded() {
-                loaded++;
-                if (loaded === totalImages) initMarquee();
-            }
-            images.forEach(function(img) {
-                if (img.complete && img.naturalWidth > 0) checkAllLoaded();
-                else {
-                    img.addEventListener('load', checkAllLoaded);
-                    img.addEventListener('error', checkAllLoaded);
+        document.documentElement.classList.add('js-enabled');
+
+        if ('IntersectionObserver' in window) {
+
+            var revealObserver = new IntersectionObserver(
+                function (entries) {
+
+                    entries.forEach(function (entry) {
+
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('visible');
+                            revealObserver.unobserve(entry.target);
+                        }
+
+                    });
+
+                },
+                {
+                    threshold: 0.1,
+                    rootMargin: '0px 0px -50px 0px'
                 }
+            );
+
+            reveals.forEach(function (el) {
+                revealObserver.observe(el);
             });
-            setTimeout(function() {
-                if (!track.style.animation || track.style.animation === 'none') initMarquee();
-            }, 3000);
+
+        } else {
+
+            reveals.forEach(function (el) {
+                el.classList.add('visible');
+            });
+
         }
 
-        var resizeTimer;
-        window.addEventListener('resize', function() {
-            clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(function() {
+
+        /* =========================================================
+           COUNTDOWN
+        ========================================================== */
+
+        var countdown =
+            document.querySelector('.event-countdown');
+
+        var countdownStatus =
+            document.getElementById('event-countdown-status');
+
+        var lastAnnouncedMinute = null;
+
+        if (countdown) {
+
+            var target =
+                new Date(countdown.dataset.target).getTime();
+
+            var units =
+                countdown.querySelectorAll(
+                    '.event-countdown__number'
+                );
+
+            function updateCountdown() {
+
+                var now = new Date().getTime();
+
+                var diff = target - now;
+
+                if (diff < 0) {
+                    diff = 0;
+                }
+
+                var d = Math.floor(
+                    diff / (1000 * 60 * 60 * 24)
+                );
+
+                var h = Math.floor(
+                    (diff % (1000 * 60 * 60 * 24)) /
+                    (1000 * 60 * 60)
+                );
+
+                var m = Math.floor(
+                    (diff % (1000 * 60 * 60)) /
+                    (1000 * 60)
+                );
+
+                var s = Math.floor(
+                    (diff % (1000 * 60)) /
+                    1000
+                );
+
+                units.forEach(function (u) {
+
+                    var unit = u.dataset.unit;
+
+                    if (unit === 'days') {
+                        u.textContent =
+                            String(d).padStart(2, '0');
+                    }
+
+                    if (unit === 'hours') {
+                        u.textContent =
+                            String(h).padStart(2, '0');
+                    }
+
+                    if (unit === 'minutes') {
+                        u.textContent =
+                            String(m).padStart(2, '0');
+                    }
+
+                    if (unit === 'seconds') {
+                        u.textContent =
+                            String(s).padStart(2, '0');
+                    }
+
+                });
+
+                /*
+                 * Announce once per minute instead of every second.
+                 * This prevents excessive screen-reader announcements.
+                 */
+                if (
+                    countdownStatus &&
+                    m !== lastAnnouncedMinute
+                ) {
+
+                    countdownStatus.textContent =
+                        d + ' days, ' +
+                        h + ' hours, ' +
+                        m + ' minutes remaining.';
+
+                    lastAnnouncedMinute = m;
+                }
+
+            }
+
+            updateCountdown();
+
+            setInterval(updateCountdown, 1000);
+        }
+
+
+        /* =========================================================
+           SPONSOR MARQUEE
+        ========================================================== */
+
+        var track =
+            document.getElementById('sponsorTrack');
+
+        var marqueeToggle =
+            document.getElementById(
+                'sponsorMarqueeToggle'
+            );
+
+        if (track) {
+
+            var marquee = track.parentElement;
+
+            var originalHTML = track.innerHTML;
+
+            function fillTrack() {
+
+                track.innerHTML = originalHTML;
+
+                var attempts = 0;
+
+                while (
+                    track.scrollWidth <
+                    marquee.offsetWidth * 2 &&
+                    attempts < 20
+                ) {
+
+                    track.innerHTML += originalHTML;
+
+                    attempts++;
+                }
+
+            }
+
+            function setAnimationDuration() {
+
+                if (track.children.length === 0) {
+                    track.innerHTML = originalHTML;
+                }
+
+                var oneLoopWidth =
+                    track.scrollWidth / 2;
+
+                if (
+                    oneLoopWidth === 0 ||
+                    !isFinite(oneLoopWidth)
+                ) {
+
+                    oneLoopWidth =
+                        marquee.offsetWidth || 800;
+                }
+
+                var duration =
+                    Math.max(oneLoopWidth / 60, 10);
+
                 track.style.animation = 'none';
-                initMarquee();
-                setTimeout(attachSponsorClickEvents, 100);
-            }, 300);
-        });
 
-        document.addEventListener('visibilitychange', function() {
-            if (!document.hidden) {
-                setTimeout(function() {
-                    var computedStyle = window.getComputedStyle(track);
-                    if (computedStyle.animationName === 'none') initMarquee();
-                }, 500);
+                void track.offsetHeight;
+
+                track.style.animation =
+                    'eventSponsorScroll ' +
+                    duration +
+                    's linear infinite';
+
             }
-        });
 
-        waitForImagesAndInit();
-    }
 
-    // ─── SPONSOR MODAL ───
-    var modal = document.getElementById('sponsorModal');
-    var closeBtn = document.getElementById('sponsorModalClose');
-    if (!modal || !closeBtn) return;
+            function initMarquee() {
 
-    var modalLogo = document.getElementById('modalLogo');
-    var modalName = document.getElementById('modalName');
-    var modalBio = document.getElementById('modalBio');
-    var modalWebsite = document.getElementById('modalWebsite');
-    var modalSocial = document.getElementById('modalSocial');
+                fillTrack();
 
-    var sponsorsData = <?php 
-        $sponsor_data = [];
-        foreach ($clean_sponsors as $index => $sponsor) {
-            $sponsor_data[$index] = [
-                'name' => $sponsor['name'] ?? '',
-                'logo' => !empty($sponsor['image_id']) ? wp_get_attachment_image_url(intval($sponsor['image_id']), 'medium') : '',
-                'bio' => $sponsor['bio'] ?? '',
-                'link' => $sponsor['link'] ?? '',
-                'facebook' => $sponsor['facebook'] ?? '',
-                'instagram' => $sponsor['instagram'] ?? '',
-                'tiktok' => $sponsor['tiktok'] ?? '',
-                'twitter' => $sponsor['twitter'] ?? '',
-                'youtube' => $sponsor['youtube'] ?? '',
-            ];
+                setAnimationDuration();
+
+            }
+
+
+            function waitForImagesAndInit() {
+
+                var images =
+                    track.querySelectorAll('img');
+
+                if (images.length === 0) {
+
+                    initMarquee();
+
+                    return;
+                }
+
+                var loaded = 0;
+
+                var totalImages =
+                    images.length;
+
+                function checkAllLoaded() {
+
+                    loaded++;
+
+                    if (loaded >= totalImages) {
+                        initMarquee();
+                    }
+
+                }
+
+                images.forEach(function (img) {
+
+                    if (
+                        img.complete &&
+                        img.naturalWidth > 0
+                    ) {
+
+                        checkAllLoaded();
+
+                    } else {
+
+                        img.addEventListener(
+                            'load',
+                            checkAllLoaded
+                        );
+
+                        img.addEventListener(
+                            'error',
+                            checkAllLoaded
+                        );
+
+                    }
+
+                });
+
+                /*
+                 * Fallback in case an image never reports
+                 * its load/error event.
+                 */
+                setTimeout(function () {
+
+                    if (
+                        !track.style.animation ||
+                        track.style.animation === 'none'
+                    ) {
+
+                        initMarquee();
+
+                    }
+
+                }, 3000);
+
+            }
+
+
+            var resizeTimer;
+
+            window.addEventListener(
+                'resize',
+                function () {
+
+                    clearTimeout(resizeTimer);
+
+                    resizeTimer = setTimeout(
+                        function () {
+
+                            track.style.animation =
+                                'none';
+
+                            initMarquee();
+
+                        },
+                        300
+                    );
+
+                }
+            );
+
+
+            document.addEventListener(
+                'visibilitychange',
+                function () {
+
+                    if (!document.hidden) {
+
+                        setTimeout(
+                            function () {
+
+                                var computedStyle =
+                                    window.getComputedStyle(
+                                        track
+                                    );
+
+                                if (
+                                    computedStyle.animationName ===
+                                    'none'
+                                ) {
+
+                                    initMarquee();
+
+                                }
+
+                            },
+                            500
+                        );
+
+                    }
+
+                }
+            );
+
+
+            /*
+             * Pause when keyboard focus enters
+             * the sponsor area.
+             */
+            track.addEventListener(
+                'focusin',
+                function () {
+
+                    if (
+                        marqueeToggle &&
+                        marqueeToggle.getAttribute(
+                            'aria-pressed'
+                        ) !== 'true'
+                    ) {
+
+                        track.style.animationPlayState =
+                            'paused';
+
+                    }
+
+                }
+            );
+
+
+            track.addEventListener(
+                'focusout',
+                function () {
+
+                    /*
+                     * Do not automatically resume if the
+                     * user explicitly paused the animation.
+                     */
+                    if (
+                        marqueeToggle &&
+                        marqueeToggle.getAttribute(
+                            'aria-pressed'
+                        ) === 'true'
+                    ) {
+
+                        return;
+                    }
+
+                    setTimeout(function () {
+
+                        if (
+                            !track.contains(
+                                document.activeElement
+                            )
+                        ) {
+
+                            track.style.animationPlayState =
+                                'running';
+
+                        }
+
+                    }, 0);
+
+                }
+            );
+
+
+            waitForImagesAndInit();
+
         }
-        echo json_encode($sponsor_data);
-    ?>;
 
-    function openSponsorModal(index) {
-        var sponsor = sponsorsData[index];
-        if (!sponsor) return;
-        var hasDetails = sponsor.bio || sponsor.link || sponsor.facebook || sponsor.instagram || sponsor.tiktok || sponsor.twitter || sponsor.youtube;
-        if (!hasDetails) return;
 
-        modalLogo.innerHTML = sponsor.logo ? '<img src="' + sponsor.logo + '" alt="' + sponsor.name + '">' : '';
-        modalName.textContent = sponsor.name;
-        
-        if (sponsor.bio) { modalBio.textContent = sponsor.bio; modalBio.style.display = 'block'; }
-        else { modalBio.style.display = 'none'; }
-        
-        if (sponsor.link) {
-            modalWebsite.innerHTML = '<a href="' + sponsor.link + '" target="_blank" rel="noopener noreferrer">' + sponsor.link.replace(/^https?:\/\//, '') + '</a>';
-            modalWebsite.style.display = 'block';
-        } else { modalWebsite.style.display = 'none'; }
+        /* =========================================================
+           SPONSOR MARQUEE TOGGLE
+        ========================================================== */
 
-        var socialHtml = '';
-        var socialLinks = [
-            { key: 'facebook', label: 'Facebook', icon: '<svg class="social-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>' },
-            { key: 'instagram', label: 'Instagram', icon: '<svg class="social-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>' },
-            { key: 'tiktok', label: 'TikTok', icon: '<svg class="social-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>' },
-            { key: 'twitter', label: 'X (Twitter)', icon: '<svg class="social-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>' },
-            { key: 'youtube', label: 'YouTube', icon: '<svg class="social-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>' },
-        ];
-        
-        var hasSocial = false;
-        socialLinks.forEach(function(link) {
-            if (sponsor[link.key]) {
-                hasSocial = true;
-                socialHtml += '<a href="' + sponsor[link.key] + '" target="_blank" rel="noopener noreferrer" class="' + link.key + '">' + link.icon + ' ' + link.label + '</a>';
+        if (marqueeToggle && track) {
+
+            marqueeToggle.addEventListener(
+                'click',
+                function () {
+
+                    var isPaused =
+                        marqueeToggle.getAttribute(
+                            'aria-pressed'
+                        ) === 'true';
+
+                    if (isPaused) {
+
+                        track.style.animationPlayState =
+                            'running';
+
+                        marqueeToggle.textContent =
+                            'Pause sponsor animation';
+
+                        marqueeToggle.setAttribute(
+                            'aria-pressed',
+                            'false'
+                        );
+
+                    } else {
+
+                        track.style.animationPlayState =
+                            'paused';
+
+                        marqueeToggle.textContent =
+                            'Resume sponsor animation';
+
+                        marqueeToggle.setAttribute(
+                            'aria-pressed',
+                            'true'
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+
+
+        /* =========================================================
+           SPONSOR MODAL
+        ========================================================== */
+
+        var modal =
+            document.getElementById('sponsorModal');
+
+        var closeBtn =
+            document.getElementById(
+                'sponsorModalClose'
+            );
+
+        var modalLogo =
+            document.getElementById('modalLogo');
+
+        var modalName =
+            document.getElementById('modalName');
+
+        var modalBio =
+            document.getElementById('modalBio');
+
+        var modalWebsite =
+            document.getElementById('modalWebsite');
+
+        var modalSocial =
+            document.getElementById('modalSocial');
+
+
+        /*
+         * Do not allow a missing modal element to break
+         * the entire page.
+         */
+        if (
+            modal &&
+            closeBtn &&
+            modalName &&
+            modalBio &&
+            modalWebsite &&
+            modalSocial
+        ) {
+
+            var sponsorsData = <?php
+
+                $sponsor_data = [];
+
+                foreach (
+                    $clean_sponsors
+                    as $index => $sponsor
+                ) {
+
+                    $sponsor_data[$index] = [
+                        'name' =>
+                            $sponsor['name'] ?? '',
+
+                        'logo' =>
+                            !empty($sponsor['image_id'])
+                                ? wp_get_attachment_image_url(
+                                    intval(
+                                        $sponsor['image_id']
+                                    ),
+                                    'medium'
+                                )
+                                : '',
+
+                        'bio' =>
+                            $sponsor['bio'] ?? '',
+
+                        'link' =>
+                            $sponsor['link'] ?? '',
+
+                        'facebook' =>
+                            $sponsor['facebook'] ?? '',
+
+                        'instagram' =>
+                            $sponsor['instagram'] ?? '',
+
+                        'tiktok' =>
+                            $sponsor['tiktok'] ?? '',
+
+                        'twitter' =>
+                            $sponsor['twitter'] ?? '',
+
+                        'youtube' =>
+                            $sponsor['youtube'] ?? '',
+                    ];
+
+                }
+
+                echo wp_json_encode(
+                    $sponsor_data
+                );
+
+            ?>;
+
+
+            var lastFocusedElement = null;
+
+
+            /* =====================================================
+               GET FOCUSABLE ELEMENTS
+            ====================================================== */
+
+            function getModalFocusableElements() {
+
+                return modal.querySelectorAll(
+                    'a[href], ' +
+                    'button:not([disabled]), ' +
+                    'input:not([disabled]), ' +
+                    'select:not([disabled]), ' +
+                    'textarea:not([disabled]), ' +
+                    '[tabindex]:not([tabindex="-1"])'
+                );
+
             }
-        });
-        
-        if (hasSocial) { modalSocial.innerHTML = socialHtml; modalSocial.style.display = 'flex'; }
-        else { modalSocial.style.display = 'none'; }
 
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
 
-    function closeSponsorModal() {
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
-    }
+            /* =====================================================
+               OPEN SPONSOR MODAL
+            ====================================================== */
 
-    function attachSponsorClickEvents() {
-        var trackEl = document.getElementById('sponsorTrack');
-        if (!trackEl) return;
-        trackEl.removeEventListener('click', handleSponsorClick);
-        trackEl.addEventListener('click', handleSponsorClick);
-    }
+            function openSponsorModal(index) {
 
-    function handleSponsorClick(e) {
-        var target = e.target.closest('.event-sponsor-item[data-sponsor]');
-        if (!target) return;
-        openSponsorModal(target.getAttribute('data-sponsor'));
-    }
+                var sponsor =
+                    sponsorsData[index];
 
-    closeBtn.addEventListener('click', closeSponsorModal);
-    modal.addEventListener('click', function(e) { if (e.target === this) closeSponsorModal(); });
-    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeSponsorModal(); });
+                if (!sponsor) {
+                    return;
+                }
 
-    attachSponsorClickEvents();
 
-    var trackObs = document.getElementById('sponsorTrack');
-    if (trackObs) {
-        var observer = new MutationObserver(function() { attachSponsorClickEvents(); });
-        observer.observe(trackObs, { childList: true, subtree: true });
-    }
+                var hasDetails =
+                    sponsor.bio ||
+                    sponsor.link ||
+                    sponsor.facebook ||
+                    sponsor.instagram ||
+                    sponsor.tiktok ||
+                    sponsor.twitter ||
+                    sponsor.youtube;
+
+
+                if (!hasDetails) {
+                    return;
+                }
+
+
+                /*
+                 * Remember which sponsor button opened
+                 * the dialog so focus can return to it.
+                 */
+                lastFocusedElement =
+                    document.activeElement;
+
+
+                /*
+                 * Logo
+                 */
+                if (modalLogo) {
+
+                    modalLogo.innerHTML =
+                        sponsor.logo
+                            ? '<img src="' +
+                              sponsor.logo +
+                              '" alt="' +
+                              sponsor.name +
+                              '">'
+                            : '';
+
+                }
+
+
+                /*
+                 * Sponsor name
+                 */
+                modalName.textContent =
+                    sponsor.name || 'Sponsor';
+
+
+                /*
+                 * Biography
+                 */
+                if (sponsor.bio) {
+
+                    modalBio.textContent =
+                        sponsor.bio;
+
+                    modalBio.style.display =
+                        'block';
+
+                } else {
+
+                    modalBio.textContent = '';
+
+                    modalBio.style.display =
+                        'none';
+
+                }
+
+
+                /*
+                 * Website
+                 */
+                if (sponsor.link) {
+
+                    modalWebsite.innerHTML =
+                        '<a href="' +
+                        sponsor.link +
+                        '" target="_blank" ' +
+                        'rel="noopener noreferrer">' +
+                        'Visit ' +
+                        sponsor.name +
+                        ' website' +
+                        '</a>';
+
+                    modalWebsite.style.display =
+                        'block';
+
+                } else {
+
+                    modalWebsite.innerHTML = '';
+
+                    modalWebsite.style.display =
+                        'none';
+
+                }
+
+
+                /*
+                 * Social links
+                 */
+                var socialHtml = '';
+
+                var socialLinks = [
+
+                    {
+                        key: 'facebook',
+                        label: 'Facebook',
+                        icon:
+                            '<svg class="social-icon" ' +
+                            'viewBox="0 0 24 24" ' +
+                            'fill="currentColor" ' +
+                            'aria-hidden="true" ' +
+                            'focusable="false">' +
+                            '<path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>' +
+                            '</svg>'
+                    },
+
+                    {
+                        key: 'instagram',
+                        label: 'Instagram',
+                        icon:
+                            '<svg class="social-icon" ' +
+                            'viewBox="0 0 24 24" ' +
+                            'fill="currentColor" ' +
+                            'aria-hidden="true" ' +
+                            'focusable="false">' +
+                            '<path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-.5-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919C8.333.014 8.741 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>' +
+                            '</svg>'
+                    },
+
+                    {
+                        key: 'tiktok',
+                        label: 'TikTok',
+                        icon:
+                            '<svg class="social-icon" ' +
+                            'viewBox="0 0 24 24" ' +
+                            'fill="currentColor" ' +
+                            'aria-hidden="true" ' +
+                            'focusable="false">' +
+                            '<path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>' +
+                            '</svg>'
+                    },
+
+                    {
+                        key: 'twitter',
+                        label: 'X (Twitter)',
+                        icon:
+                            '<svg class="social-icon" ' +
+                            'viewBox="0 0 24 24" ' +
+                            'fill="currentColor" ' +
+                            'aria-hidden="true" ' +
+                            'focusable="false">' +
+                            '<path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>' +
+                            '</svg>'
+                    },
+
+                    {
+                        key: 'youtube',
+                        label: 'YouTube',
+                        icon:
+                            '<svg class="social-icon" ' +
+                            'viewBox="0 0 24 24" ' +
+                            'fill="currentColor" ' +
+                            'aria-hidden="true" ' +
+                            'focusable="false">' +
+                            '<path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>' +
+                            '</svg>'
+                    }
+
+                ];
+
+
+                var hasSocial = false;
+
+
+                socialLinks.forEach(
+                    function (link) {
+
+                        if (sponsor[link.key]) {
+
+                            hasSocial = true;
+
+                            socialHtml +=
+                                '<a href="' +
+                                sponsor[link.key] +
+                                '" target="_blank" ' +
+                                'rel="noopener noreferrer" ' +
+                                'class="' +
+                                link.key +
+                                '">' +
+                                link.icon +
+                                ' ' +
+                                link.label +
+                                '</a>';
+
+                        }
+
+                    }
+                );
+
+
+                if (hasSocial) {
+
+                    modalSocial.innerHTML =
+                        socialHtml;
+
+                    modalSocial.style.display =
+                        'flex';
+
+                } else {
+
+                    modalSocial.innerHTML = '';
+
+                    modalSocial.style.display =
+                        'none';
+
+                }
+
+
+                /*
+                 * Show modal.
+                 */
+                modal.hidden = false;
+
+                modal.classList.add('active');
+
+                document.body.style.overflow =
+                    'hidden';
+
+
+                /*
+                 * Move focus into the dialog.
+                 */
+                closeBtn.focus();
+
+            }
+
+
+            /* =====================================================
+               CLOSE SPONSOR MODAL
+            ====================================================== */
+
+            function closeSponsorModal() {
+
+                modal.classList.remove('active');
+
+                modal.hidden = true;
+
+                document.body.style.overflow = '';
+
+
+                /*
+                 * Return keyboard focus to the sponsor
+                 * button that opened the dialog.
+                 */
+                if (
+                    lastFocusedElement &&
+                    typeof lastFocusedElement.focus ===
+                    'function'
+                ) {
+
+                    lastFocusedElement.focus();
+
+                }
+
+                lastFocusedElement = null;
+
+            }
+
+
+            /* =====================================================
+               SPONSOR CLICK / KEYBOARD EVENTS
+            ====================================================== */
+
+            var sponsorTrack =
+                document.getElementById('sponsorTrack');
+
+
+            function handleSponsorClick(e) {
+
+                var target =
+                    e.target.closest(
+                        '.event-sponsor-item[data-sponsor]'
+                    );
+
+
+                if (!target) {
+                    return;
+                }
+
+
+                /*
+                 * Only interactive sponsor buttons
+                 * should open the modal.
+                 */
+                if (
+                    target.tagName.toLowerCase() !==
+                    'button'
+                ) {
+
+                    return;
+
+                }
+
+
+                openSponsorModal(
+                    target.getAttribute(
+                        'data-sponsor'
+                    )
+                );
+
+            }
+
+
+            if (sponsorTrack) {
+
+                sponsorTrack.addEventListener(
+                    'click',
+                    handleSponsorClick
+                );
+
+            }
+
+
+            /* =====================================================
+               CLOSE BUTTON
+            ====================================================== */
+
+            closeBtn.addEventListener(
+                'click',
+                closeSponsorModal
+            );
+
+
+            /* =====================================================
+               CLICK OUTSIDE MODAL
+            ====================================================== */
+
+            modal.addEventListener(
+                'click',
+                function (e) {
+
+                    if (e.target === modal) {
+                        closeSponsorModal();
+                    }
+
+                }
+            );
+
+
+            /* =====================================================
+               ESCAPE + FOCUS TRAP
+            ====================================================== */
+
+            document.addEventListener(
+                'keydown',
+                function (e) {
+
+                    if (
+                        !modal.classList.contains(
+                            'active'
+                        )
+                    ) {
+
+                        return;
+                    }
+
+
+                    /*
+                     * Escape closes the dialog.
+                     */
+                    if (e.key === 'Escape') {
+
+                        e.preventDefault();
+
+                        closeSponsorModal();
+
+                        return;
+
+                    }
+
+
+                    /*
+                     * Keep keyboard focus inside
+                     * the modal.
+                     */
+                    if (e.key !== 'Tab') {
+                        return;
+                    }
+
+
+                    var focusable =
+                        getModalFocusableElements();
+
+
+                    if (!focusable.length) {
+
+                        e.preventDefault();
+
+                        closeBtn.focus();
+
+                        return;
+
+                    }
+
+
+                    var first =
+                        focusable[0];
+
+                    var last =
+                        focusable[
+                            focusable.length - 1
+                        ];
+
+
+                    if (
+                        e.shiftKey &&
+                        document.activeElement === first
+                    ) {
+
+                        e.preventDefault();
+
+                        last.focus();
+
+                    } else if (
+                        !e.shiftKey &&
+                        document.activeElement === last
+                    ) {
+
+                        e.preventDefault();
+
+                        first.focus();
+
+                    }
+
+                }
+            );
+
+        }
+
+    });
+
 })();
 </script>
 

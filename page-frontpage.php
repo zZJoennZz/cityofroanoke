@@ -8,6 +8,8 @@
 get_header();
 ?>
 
+<main id="main-content">
+
 <!-- ==================== HERO SECTION ==================== -->
 <section class="hero-section">
     <div class="hero-media">
@@ -1296,4 +1298,5 @@ function render_experience_card( $image_url, $tag, $title, $url, $accent_tl, $ac
 </script>
 
 <?php
+echo '</main>';
 get_footer();

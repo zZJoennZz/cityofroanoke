@@ -16,6 +16,7 @@
             var isHidden = menu.classList.contains('hidden');
             menu.classList.toggle('hidden');
             this.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            menu.setAttribute('aria-hidden', isHidden ? 'false' : 'true');
         });
     }
 
@@ -34,13 +35,16 @@
             siblings.forEach(function(openMenu) {
                 if (openMenu !== submenu) {
                     openMenu.classList.remove('is-open');
-                    openMenu.parentElement.querySelector('.mobile-submenu-toggle').classList.remove('is-open');
+                    var siblingToggle = openMenu.parentElement.querySelector('.mobile-submenu-toggle');
+                    siblingToggle.classList.remove('is-open');
+                    siblingToggle.setAttribute('aria-expanded', 'false');
                 }
             });
 
             // Toggle current
             submenu.classList.toggle('is-open', !isOpen);
             this.classList.toggle('is-open', !isOpen);
+            this.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
         });
     });
 

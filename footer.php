@@ -106,7 +106,7 @@
     </section>
 
 <!-- ==================== FOOTER ==================== -->
-<footer class="site-footer">
+<footer class="site-footer" aria-label="<?php esc_attr_e( 'Site footer', 'visit-roanoke' ); ?>">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="grid md:grid-cols-4 gap-8 mb-8">
 
@@ -136,7 +136,7 @@
             </div>
 
             <!-- Column 2: Footer Widget 1 -->
-            <div>
+            <!-- <div>
                 <?php if ( is_active_sidebar( 'footer-1' ) ) : ?>
                     <?php dynamic_sidebar( 'footer-1' ); ?>
                 <?php else : ?>
@@ -151,10 +151,11 @@
                     ) );
                     ?>
                 <?php endif; ?>
-            </div>
-
+            </div> -->
+            <div aria-hidden="true"></div>
+            <div aria-hidden="true"></div>
             <!-- Column 3: Footer Widget 2 -->
-            <div>
+            <!-- <div>
                 <?php if ( is_active_sidebar( 'footer-2' ) ) : ?>
                     <?php dynamic_sidebar( 'footer-2' ); ?>
                 <?php else : ?>
@@ -166,7 +167,7 @@
                         <li><a href="<?php echo esc_url( get_permalink( get_page_by_path( 'contact' ) ) ); ?>" class="footer-link"><?php esc_html_e( 'Contact Us', 'visit-roanoke' ); ?></a></li>
                     </ul>
                 <?php endif; ?>
-            </div>
+            </div> -->
 
             <!-- Column 4: Footer Widget 3 / Contact -->
             <div>
@@ -176,9 +177,10 @@
                     <h4 class="font-headline font-black text-sm mb-4 text-white uppercase tracking-wider"><?php esc_html_e( 'Contact', 'visit-roanoke' ); ?></h4>
                     <address class="not-italic text-white/50 text-sm font-body space-y-1">
                         <p><?php esc_html_e( 'City of Roanoke, Texas', 'visit-roanoke' ); ?></p>
-                        <p><?php esc_html_e( '308 S. Walnut Street', 'visit-roanoke' ); ?></p>
+                        <p><?php esc_html_e( '500 S. Oak St.,', 'visit-roanoke' ); ?></p>
                         <p><?php esc_html_e( 'Roanoke, TX 76262', 'visit-roanoke' ); ?></p>
                         <p><a href="tel:8174912411" class="footer-link">(817) 491-2411</a></p>
+                        <p><a href="mailto:specialevents@roanoketexas.com" class="footer-link">specialevents@roanoketexas.com</a></p>
                     </address>
                 <?php endif; ?>
             </div>
@@ -187,6 +189,10 @@
 
         <div class="border-t border-white/10 pt-8 text-center text-white/30 text-xs font-body">
             <p>&copy; <?php echo esc_html( date_i18n( 'Y' ) ); ?> <?php bloginfo( 'name' ); ?>. <?php esc_html_e( 'All rights reserved.', 'visit-roanoke' ); ?></p>
+            <div class="mt-3 flex flex-wrap items-center justify-center gap-4">
+                <a href="<?php echo esc_url( home_url( '/accessibility' ) ); ?>" class="footer-link"><?php esc_html_e( 'Accessibility', 'visit-roanoke' ); ?></a>
+                <a href="<?php echo esc_url( home_url( '/privacy-policy' ) ); ?>" class="footer-link"><?php esc_html_e( 'Privacy Policy', 'visit-roanoke' ); ?></a>
+            </div>
         </div>
     </div>
 </footer>

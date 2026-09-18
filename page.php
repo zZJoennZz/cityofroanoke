@@ -26,7 +26,7 @@ $subtitle = get_post_meta( get_the_ID(), 'page_subtitle', true );
 </section>
 
 <!-- ==================== MAIN CONTENT + SIDEBAR ==================== -->
-<div class="vr-main-wrap">
+<div id="main-content" class="vr-main-wrap">
     <div class="vr-container">
         <div class="vr-grid">
 
@@ -60,7 +60,8 @@ $subtitle = get_post_meta( get_the_ID(), 'page_subtitle', true );
                     <div class="vr-sidebar-card">
                         <h3 class="vr-sidebar-title"><?php _e( 'Search', 'visit-roanoke' ); ?></h3>
                         <form role="search" method="get" action="<?php echo esc_url( home_url('/') ); ?>" class="vr-search-form">
-                            <input type="search" name="s" placeholder="<?php esc_attr_e( 'Search...', 'visit-roanoke' ); ?>" class="vr-search-input">
+                            <label for="page-search" class="screen-reader-text"><?php esc_html_e( 'Search this site', 'visit-roanoke' ); ?></label>
+                            <input id="page-search" type="search" name="s" placeholder="<?php esc_attr_e( 'Search...', 'visit-roanoke' ); ?>" class="vr-search-input">
                             <button type="submit" class="vr-search-btn" aria-label="<?php esc_attr_e( 'Search', 'visit-roanoke' ); ?>">
                                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                             </button>

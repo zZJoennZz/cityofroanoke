@@ -38,6 +38,12 @@ body {
     line-height: 1.7;
 }
 
+/* Keep keyboard focus visible across all templates. */
+:where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 3px solid var(--burnt-orange);
+    outline-offset: 3px;
+}
+
 /* ============================================
    WORDPRESS CORE — ALIGNMENTS
    ============================================ */
@@ -761,6 +767,13 @@ figcaption {
 }
 
 .menu-item:hover > .sub-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.menu-item:focus-within > .sub-menu,
+.sub-menu.is-open {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);

@@ -16,11 +16,13 @@
 <body <?php body_class( 'bg-white text-navy font-body antialiased' ); ?>>
 <?php wp_body_open(); ?>
 
-<!-- ==================== NAVIGATION ==================== -->
-<nav class="site-nav relative z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-30">
+<a class="screen-reader-text skip-link" href="#main-content"><?php esc_html_e( 'Skip to main content', 'visit-roanoke' ); ?></a>
 
+<!-- ==================== NAVIGATION ==================== -->
+<nav class="site-nav relative z-40" aria-label="<?php esc_attr_e( 'Primary navigation', 'visit-roanoke' ); ?>">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- <div class="flex justify-between items-center h-30"> -->
+        <div class="flex justify-center items-center h-30">
             <!-- Logo -->
             <div class="flex-shrink-0 flex items-center gap-3">
                 <a href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home" class="flex items-center gap-3">
@@ -39,7 +41,7 @@
             </div>
 
             <!-- Desktop Menu -->
-            <div class="hidden md:flex space-x-8 items-center">
+            <!-- <div class="hidden md:flex space-x-8 items-center">
                 <?php
                 wp_nav_menu( array(
                     'theme_location'  => 'primary',
@@ -50,19 +52,19 @@
                     'depth'           => 3,
                 ) );
                 ?>
-            </div>
+            </div> -->
 
             <!-- Mobile Toggle -->
-            <div class="md:hidden">
-                <button id="mobile-menu-toggle" class="text-navy hover:text-orange p-2 transition" aria-label="<?php esc_attr_e( 'Toggle Menu', 'visit-roanoke' ); ?>" aria-expanded="false">
+            <!-- <div class="md:hidden">
+                <button id="mobile-menu-toggle" class="text-navy hover:text-orange p-2 transition" aria-label="<?php esc_attr_e( 'Toggle Menu', 'visit-roanoke' ); ?>" aria-controls="mobile-menu" aria-expanded="false">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 </button>
-            </div>
+            </div> -->
         </div>
     </div>
 
     <!-- Mobile Menu -->
-    <div id="mobile-menu" class="hidden absolute left-0 right-0 top-full bg-white border-t border-roanoke-gray-200 shadow-lg z-50 md:hidden w-100">
+    <!-- <div id="mobile-menu" class="hidden absolute left-0 right-0 top-full bg-white border-t border-roanoke-gray-200 shadow-lg z-50 md:hidden w-100" aria-hidden="true">
         <div class="px-4 py-2">
             <?php
             wp_nav_menu( array(
@@ -75,5 +77,5 @@
             ) );
             ?>
         </div>
-    </div>
+    </div> -->
 </nav>

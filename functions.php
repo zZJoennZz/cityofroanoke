@@ -600,6 +600,7 @@ class Roanoke_Event_Meta_Box {
         ];
 
         $logo_id      = $this->get($post->ID, 'logo_id');
+        $presenting_sponsor_id = $this->get($post->ID, 'presenting_sponsor_id');
         $hero_img_id  = $this->get($post->ID, 'hero_image_id');
         $map_img_id   = $this->get($post->ID, 'map_image_id');
         $gallery_ids  = $this->get($post->ID, 'gallery_ids');
@@ -836,6 +837,20 @@ class Roanoke_Event_Meta_Box {
                                 <button type="button" class="button roanoke-media-upload" data-target="event_logo_id" data-preview="logo_preview">Select Logo</button>
                                 <button type="button" class="button roanoke-media-remove" data-target="event_logo_id" data-preview="logo_preview" <?php echo $logo_id ? '' : 'style="display:none;"'; ?>>Remove</button>
                             </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Presenting Sponsor</th>
+                        <td>
+                            <div class="roanoke-media-field">
+                                <input type="hidden" name="event_presenting_sponsor_id" id="event_presenting_sponsor_id" value="<?php echo esc_attr($presenting_sponsor_id); ?>">
+                                <div class="roanoke-media-preview" id="presenting_sponsor_preview">
+                                    <?php if ($presenting_sponsor_id) echo wp_get_attachment_image(intval($presenting_sponsor_id), 'medium'); ?>
+                                </div>
+                                <button type="button" class="button roanoke-media-upload" data-target="event_presenting_sponsor_id" data-preview="presenting_sponsor_preview">Select Image</button>
+                                <button type="button" class="button roanoke-media-remove" data-target="event_presenting_sponsor_id" data-preview="presenting_sponsor_preview" <?php echo $presenting_sponsor_id ? '' : 'style="display:none;"'; ?>>Remove</button>
+                            </div>
+                            <p class="description">Displayed between the short description and event details.</p>
                         </td>
                     </tr>
                     <tr>
@@ -1671,7 +1686,7 @@ class Roanoke_Event_Meta_Box {
         // Plain text fields (no HTML allowed)
         $text_fields = [
             'color_scheme', 'color_primary', 'color_secondary', 'color_accent', 'color_background', 'color_dark_text', 'color_optional_accent',
-            'logo_id', 'tagline',
+            'logo_id', 'presenting_sponsor_id', 'tagline',
             'hero_image_id', 'hero_video', 'short_desc',
             'date', 'time', 'end_time', 'location', 'address', 'cost', 'countdown',
             'map_image_id',
@@ -1733,7 +1748,13 @@ class Roanoke_Event_Meta_Box {
 
                 foreach ( wp_unslash( $_POST['event_' . $arr] ) as $item ) {
                     if ( is_array( $item ) ) {
-                        $clean[] = array_map( 'sanitize_text_field', $item );
+                        $clean_item = array_map( 'sanitize_text_field', $item );
+
+                        if ( 'faq' === $arr && isset( $item['answer'] ) ) {
+                            $clean_item['answer'] = wp_kses_post( $item['answer'] );
+                        }
+
+                        $clean[] = $clean_item;
                     }
                 }
 
@@ -1821,6 +1842,86 @@ class Roanoke_Event_Meta_Box {
 }
 
 new Roanoke_Event_Meta_Box();
+
+/**
+ * Add page-wide header and footer code fields.
+ */
+function visit_roanoke_add_page_code_meta_box( $post_type, $post ) {
+    if ( 'page' !== $post_type ) {
+        return;
+    }
+
+    add_meta_box(
+        'roanoke_page_code',
+        'Additional Code',
+        'visit_roanoke_render_page_code_meta_box',
+        'page',
+        'normal',
+        'default'
+    );
+}
+add_action( 'add_meta_boxes', 'visit_roanoke_add_page_code_meta_box', 10, 2 );
+
+function visit_roanoke_render_page_code_meta_box( $post ) {
+    wp_nonce_field( 'roanoke_page_code_save', 'roanoke_page_code_nonce' );
+
+    $header_code = get_post_meta( $post->ID, '_roanoke_page_header_code', true );
+    $footer_code = get_post_meta( $post->ID, '_roanoke_page_footer_code', true );
+    ?>
+    <p>
+        <label for="roanoke_page_header_code"><strong>Header Code</strong></label>
+        <textarea id="roanoke_page_header_code" name="roanoke_page_header_code" rows="6" class="large-text code" placeholder="HTML, CSS, or JavaScript added before </head>"><?php echo esc_textarea( $header_code ); ?></textarea>
+    </p>
+    <p>
+        <label for="roanoke_page_footer_code"><strong>Footer Code</strong></label>
+        <textarea id="roanoke_page_footer_code" name="roanoke_page_footer_code" rows="6" class="large-text code" placeholder="HTML, CSS, or JavaScript added before </body>"><?php echo esc_textarea( $footer_code ); ?></textarea>
+    </p>
+    <p class="description">These fields are output on this page regardless of which page template is selected.</p>
+    <?php
+}
+
+function visit_roanoke_save_page_code_meta( $post_id ) {
+    if (
+        ! isset( $_POST['roanoke_page_code_nonce'] )
+        || ! wp_verify_nonce( $_POST['roanoke_page_code_nonce'], 'roanoke_page_code_save' )
+        || ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE )
+        || ! current_user_can( 'edit_page', $post_id )
+        || 'page' !== get_post_type( $post_id )
+    ) {
+        return;
+    }
+
+    foreach ( [
+        'roanoke_page_header_code' => '_roanoke_page_header_code',
+        'roanoke_page_footer_code' => '_roanoke_page_footer_code',
+    ] as $field => $meta_key ) {
+        if ( ! isset( $_POST[ $field ] ) ) {
+            continue;
+        }
+
+        $value = wp_unslash( $_POST[ $field ] );
+        if ( ! current_user_can( 'unfiltered_html' ) ) {
+            $value = wp_kses_post( $value );
+        }
+
+        update_post_meta( $post_id, $meta_key, $value );
+    }
+}
+add_action( 'save_post_page', 'visit_roanoke_save_page_code_meta' );
+
+function visit_roanoke_output_page_header_code() {
+    if ( is_page() ) {
+        echo get_post_meta( get_the_ID(), '_roanoke_page_header_code', true );
+    }
+}
+add_action( 'wp_head', 'visit_roanoke_output_page_header_code', 30 );
+
+function visit_roanoke_output_page_footer_code() {
+    if ( is_page() ) {
+        echo get_post_meta( get_the_ID(), '_roanoke_page_footer_code', true );
+    }
+}
+add_action( 'wp_footer', 'visit_roanoke_output_page_footer_code', 30 );
 
 /**
  * ----------------------------------------------------
